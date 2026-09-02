@@ -88,3 +88,43 @@ export type HusbandryEvent = {
 export type NewHusbandryEvent = Pick<HusbandryEvent, 'kind' | 'amount' | 'unit' | 'subject' | 'note'> & {
   occurredAt?: string;
 };
+
+
+export const livestockKinds = ['fish', 'coral', 'invertebrate', 'plant', 'other'] as const;
+export type LivestockKind = (typeof livestockKinds)[number];
+export const livestockStatuses = ['active', 'quarantine', 'removed', 'deceased'] as const;
+export type LivestockStatus = (typeof livestockStatuses)[number];
+
+export type Livestock = {
+  id: string;
+  aquariumId: string;
+  name: string;
+  species: string | null;
+  kind: LivestockKind;
+  quantity: number;
+  status: LivestockStatus;
+  acquiredAt: string | null;
+  note: string | null;
+  createdAt: string;
+};
+export type NewLivestock = Pick<Livestock, 'name' | 'species' | 'kind' | 'quantity' | 'status' | 'acquiredAt' | 'note'>;
+
+export const equipmentKinds = ['lighting', 'filtration', 'pump', 'heater', 'doser', 'monitor', 'other'] as const;
+export type EquipmentKind = (typeof equipmentKinds)[number];
+export const equipmentStatuses = ['active', 'spare', 'service', 'retired'] as const;
+export type EquipmentStatus = (typeof equipmentStatuses)[number];
+
+export type Equipment = {
+  id: string;
+  aquariumId: string;
+  name: string;
+  manufacturer: string | null;
+  model: string | null;
+  kind: EquipmentKind;
+  status: EquipmentStatus;
+  installedAt: string | null;
+  warrantyEndsAt: string | null;
+  note: string | null;
+  createdAt: string;
+};
+export type NewEquipment = Pick<Equipment, 'name' | 'manufacturer' | 'model' | 'kind' | 'status' | 'installedAt' | 'warrantyEndsAt' | 'note'>;
