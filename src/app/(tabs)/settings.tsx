@@ -18,17 +18,14 @@ const roadmap = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos } = useAppData();
+  const { aquariums, getSelectedAquariumExportData, selectedAquarium } = useAppData();
   const [exporting, setExporting] = useState(false);
 
-  const exportData = selectedAquarium ? {
-    aquarium: selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
-  } : null;
-
   async function runExport(kind: 'backup' | 'csv') {
-    if (!exportData || exporting) return;
+    if (!selectedAquarium || exporting) return;
     setExporting(true);
     try {
+      const exportData = await getSelectedAquariumExportData();
       if (kind === 'backup') await exportBackup(exportData);
       else await exportReadingsCsv(exportData);
     } catch (caught) {
@@ -101,7 +98,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Alpha 0.18</Text>
+      <Text style={styles.version}>BattleReef Mobile · Alpha 0.19</Text>
     </Screen>
   );
 }

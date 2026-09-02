@@ -2,6 +2,17 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 const DATABASE_VERSION = 10;
 
+async function hasColumn(db: SQLiteDatabase, table: string, column: string) {
+  const rows = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  return rows.some((row) => row.name === column);
+}
+
+async function addColumnIfMissing(db: SQLiteDatabase, table: string, column: string, definition: string) {
+  if (!(await hasColumn(db, table, column))) {
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+  }
+}
+
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
 
@@ -43,12 +54,10 @@ export async function migrateDatabase(db: SQLiteDatabase) {
   }
 
   if (currentVersion < 2) {
-    await db.execAsync(`
-      ALTER TABLE parameter_readings ADD COLUMN source TEXT NOT NULL DEFAULT 'manual_user';
-      ALTER TABLE parameter_readings ADD COLUMN confidence REAL;
-      ALTER TABLE parameter_readings ADD COLUMN confirmed_at TEXT;
-      CREATE INDEX IF NOT EXISTS idx_readings_aquarium_parameter_recorded ON parameter_readings(aquarium_id, parameter, recorded_at DESC);
-    `);
+    await addColumnIfMissing(db, 'parameter_readings', 'source', "TEXT NOT NULL DEFAULT 'manual_user'");
+    await addColumnIfMissing(db, 'parameter_readings', 'confidence', 'REAL');
+    await addColumnIfMissing(db, 'parameter_readings', 'confirmed_at', 'TEXT');
+    await db.execAsync('CREATE INDEX IF NOT EXISTS idx_readings_aquarium_parameter_recorded ON parameter_readings(aquarium_id, parameter, recorded_at DESC);');
   }
 
   if (currentVersion < 3) {
@@ -162,30 +171,26 @@ export async function migrateDatabase(db: SQLiteDatabase) {
   }
 
   if (currentVersion < 8) {
-    await db.execAsync(`
-      ALTER TABLE photo_records ADD COLUMN storage_key TEXT;
-      ALTER TABLE photo_records ADD COLUMN media_state TEXT NOT NULL DEFAULT 'legacy'
-        CHECK (media_state IN ('managed', 'legacy', 'missing'));
-    `);
+    await addColumnIfMissing(db, 'photo_records', 'storage_key', 'TEXT');
+    await addColumnIfMissing(db, 'photo_records', 'media_state', "TEXT NOT NULL DEFAULT 'legacy' CHECK (media_state IN ('managed', 'legacy', 'missing'))");
   }
 
   if (currentVersion < 9) {
-    await db.execAsync(`
-      ALTER TABLE photo_records ADD COLUMN viewpoint TEXT;
-      ALTER TABLE photo_records ADD COLUMN lighting_profile TEXT;
-      ALTER TABLE photo_records ADD COLUMN guided_capture INTEGER NOT NULL DEFAULT 0
-        CHECK (guided_capture IN (0, 1));
-    `);
+    await addColumnIfMissing(db, 'photo_records', 'viewpoint', 'TEXT');
+    await addColumnIfMissing(db, 'photo_records', 'lighting_profile', 'TEXT');
+    await addColumnIfMissing(db, 'photo_records', 'guided_capture', 'INTEGER NOT NULL DEFAULT 0 CHECK (guided_capture IN (0, 1))');
   }
 
   if (currentVersion < 10) {
-    await db.execAsync(`
-      ALTER TABLE maintenance_tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'
-        CHECK (recurrence IN ('none', 'daily', 'weekly', 'monthly'));
-      ALTER TABLE maintenance_tasks ADD COLUMN notification_id TEXT;
-      ALTER TABLE maintenance_tasks ADD COLUMN parent_task_id TEXT;
-      CREATE INDEX IF NOT EXISTS idx_tasks_parent ON maintenance_tasks(parent_task_id, created_at DESC);
-    `);
+    await addColumnIfMissing(db, 'maintenance_tasks', 'recurrence', "TEXT NOT NULL DEFAULT 'none' CHECK (recurrence IN ('none', 'daily', 'weekly', 'monthly'))");
+    await addColumnIfMissing(db, 'maintenance_tasks', 'notification_id', 'TEXT');
+    await addColumnIfMissing(db, 'maintenance_tasks', 'parent_task_id', 'TEXT');
+    await db.execAsync('CREATE INDEX IF NOT EXISTS idx_tasks_parent ON maintenance_tasks(parent_task_id, created_at DESC);');
+  }
+
+  const foreignKeyViolations = await db.getAllAsync('PRAGMA foreign_key_check');
+  if (foreignKeyViolations.length > 0) {
+    throw new Error('BattleReef database integrity check failed after migration.');
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);

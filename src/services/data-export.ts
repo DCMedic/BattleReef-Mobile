@@ -10,6 +10,8 @@ import type {
 } from '@/domain/models';
 
 export const BACKUP_SCHEMA_VERSION = 2;
+export const MAX_BACKUP_MEDIA_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_BACKUP_MEDIA_TOTAL_BYTES = 100 * 1024 * 1024;
 
 export type AquariumExportData = {
   aquarium: Aquarium;
@@ -74,8 +76,12 @@ async function writeAndShare(filename: string, content: string, mimeType: string
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, content, { encoding: FileSystem.EncodingType.UTF8 });
 
-  if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
-  await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Export BattleReef data', UTI: mimeType === 'application/json' ? 'public.json' : 'public.comma-separated-values-text' });
+  try {
+    if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
+    await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Export BattleReef data', UTI: mimeType === 'application/json' ? 'public.json' : 'public.comma-separated-values-text' });
+  } finally {
+    await FileSystem.deleteAsync(uri, { idempotent: true });
+  }
 }
 
 export function createBackup(data: AquariumExportData, media: BackupMediaEntry[] = []): BattleReefBackup {
@@ -100,11 +106,19 @@ function mimeTypeForStorageKey(storageKey: string) {
 
 export async function exportBackup(data: AquariumExportData) {
   const media: BackupMediaEntry[] = [];
+  let totalMediaBytes = 0;
 
   for (const photo of data.photos) {
     if (photo.mediaState !== 'managed' || !photo.storageKey) continue;
     try {
       const payload = await readManagedMediaBase64(photo.uri);
+      if (payload.byteLength > MAX_BACKUP_MEDIA_FILE_BYTES) {
+        throw new Error(`Photo "${photo.caption ?? photo.id}" exceeds the supported 20 MB backup limit.`);
+      }
+      if (totalMediaBytes + payload.byteLength > MAX_BACKUP_MEDIA_TOTAL_BYTES) {
+        throw new Error('Managed photo media exceeds the supported 100 MB backup limit.');
+      }
+      totalMediaBytes += payload.byteLength;
       media.push({
         photoId: photo.id,
         storageKey: photo.storageKey,
@@ -112,7 +126,8 @@ export async function exportBackup(data: AquariumExportData) {
         byteLength: payload.byteLength,
         base64: payload.base64,
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('backup limit')) throw error;
       // The photo record remains in the backup even if its managed file is no longer readable.
     }
   }

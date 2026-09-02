@@ -116,6 +116,11 @@ export async function listReadings(db: SQLiteDatabase, aquariumId: string) {
   return rows.map(mapReading);
 }
 
+export async function listAllReadings(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<ReadingRow>('SELECT * FROM parameter_readings WHERE aquarium_id = ? ORDER BY recorded_at DESC', aquariumId);
+  return rows.map(mapReading);
+}
+
 export async function createReading(db: SQLiteDatabase, aquariumId: string, input: NewReading) {
   const validation = validateReading(input);
   if (!validation.valid) throw new Error(validation.message);
@@ -220,6 +225,14 @@ export async function reopenTask(db: SQLiteDatabase, task: MaintenanceTask) {
 export async function listHusbandryEvents(db: SQLiteDatabase, aquariumId: string) {
   const rows = await db.getAllAsync<HusbandryRow>(
     'SELECT * FROM husbandry_events WHERE aquarium_id = ? ORDER BY occurred_at DESC LIMIT 250',
+    aquariumId,
+  );
+  return rows.map(mapHusbandryEvent);
+}
+
+export async function listAllHusbandryEvents(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<HusbandryRow>(
+    'SELECT * FROM husbandry_events WHERE aquarium_id = ? ORDER BY occurred_at DESC',
     aquariumId,
   );
   return rows.map(mapHusbandryEvent);
@@ -401,6 +414,14 @@ export async function listInventoryEvents(db: SQLiteDatabase, aquariumId: string
   return rows.map(mapInventoryEvent);
 }
 
+export async function listAllInventoryEvents(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<InventoryEventRow>(
+    'SELECT * FROM inventory_events WHERE aquarium_id = ? ORDER BY occurred_at DESC',
+    aquariumId,
+  );
+  return rows.map(mapInventoryEvent);
+}
+
 async function recordInventoryEvent(
   db: SQLiteDatabase,
   aquariumId: string,
@@ -487,6 +508,14 @@ function mapPhoto(row: PhotoRow): PhotoRecord {
 export async function listPhotos(db: SQLiteDatabase, aquariumId: string) {
   const rows = await db.getAllAsync<PhotoRow>(
     'SELECT * FROM photo_records WHERE aquarium_id = ? ORDER BY captured_at DESC LIMIT 250',
+    aquariumId,
+  );
+  return rows.map(mapPhoto);
+}
+
+export async function listAllPhotos(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<PhotoRow>(
+    'SELECT * FROM photo_records WHERE aquarium_id = ? ORDER BY captured_at DESC',
     aquariumId,
   );
   return rows.map(mapPhoto);

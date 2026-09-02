@@ -16,7 +16,7 @@ import { formatWhen } from '@/utils/format';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { aquariums, husbandryEvents, loading, readings, selectedAquarium, selectAquarium, targetOverrides, tasks } = useAppData();
+  const { aquariums, dataError, husbandryEvents, loading, readings, selectedAquarium, selectAquarium, targetOverrides, tasks } = useAppData();
 
   const latest = readings.reduce<Partial<Record<ParameterKey, (typeof readings)[number]>>>((result, reading) => {
     if (!result[reading.parameter]) result[reading.parameter] = reading;
@@ -34,7 +34,15 @@ export default function HomeScreen() {
       title="Overview">
       {loading ? <LoadingState /> : null}
 
-      {!loading && !selectedAquarium ? (
+      {!loading && dataError ? (
+        <EmptyState
+          body={`BattleReef could not load local data safely: ${dataError}`}
+          icon="warning-outline"
+          title="Local data unavailable"
+        />
+      ) : null}
+
+      {!loading && !dataError && !selectedAquarium ? (
         <EmptyState
           action={<PrimaryButton icon="add" label="Create your first aquarium" onPress={() => router.push('/aquarium/new')} />}
           body="Set up a tank to begin logging water parameters, maintenance, livestock, and observations locally on this device."

@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { BACKUP_SCHEMA_VERSION, type BattleReefBackup, type BackupMediaEntry } from '@/services/data-export';
+import { BACKUP_SCHEMA_VERSION, MAX_BACKUP_MEDIA_FILE_BYTES, MAX_BACKUP_MEDIA_TOTAL_BYTES, type BattleReefBackup, type BackupMediaEntry } from '@/services/data-export';
 import { deleteManagedMedia, restoreManagedMediaBase64, type ManagedMedia } from '@/services/media-storage';
 
 export type RestorePreview = {
@@ -86,9 +86,9 @@ export function parseAndValidateBackup(raw: string): BattleReefBackup {
 
       const estimatedBytes = Math.floor((entry.base64.replace(/[\r\n]/g, '').length * 3) / 4);
       if (Math.abs(estimatedBytes - entry.byteLength) > 2) throw new Error('Backup media size verification failed.');
-      if (entry.byteLength > 100 * 1024 * 1024) throw new Error('A backup photo exceeds the supported 100 MB limit.');
+      if (entry.byteLength > MAX_BACKUP_MEDIA_FILE_BYTES) throw new Error('A backup photo exceeds the supported 20 MB limit.');
       totalMediaBytes += entry.byteLength;
-      if (totalMediaBytes > 500 * 1024 * 1024) throw new Error('Backup media exceeds the supported 500 MB total limit.');
+      if (totalMediaBytes > MAX_BACKUP_MEDIA_TOTAL_BYTES) throw new Error('Backup media exceeds the supported 100 MB total limit.');
     }
   }
 
