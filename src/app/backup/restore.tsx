@@ -118,6 +118,12 @@ export default function RestoreBackupScreen() {
             ))}
           </View>
 
+          <Card>
+            <Text style={styles.eyebrow}>MEDIA PAYLOAD</Text>
+            <Text style={styles.name}>{preview.mediaFiles} embedded image{preview.mediaFiles === 1 ? '' : 's'}</Text>
+            <Text style={styles.meta}>{(preview.mediaBytes / (1024 * 1024)).toFixed(1)} MB of restorable photo data</Text>
+          </Card>
+
           {preview.warnings.map((warning) => (
             <View key={warning} style={styles.warning}>
               <Text style={styles.warningTitle}>Restore note</Text>

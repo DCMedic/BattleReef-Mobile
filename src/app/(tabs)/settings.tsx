@@ -76,7 +76,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Your data</Text>
           <Pressable disabled={exporting} onPress={() => void runExport('backup')} style={styles.menuRow}>
             <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="archive-outline" size={21} /></View>
-            <View style={styles.menuText}><Text style={styles.menuTitle}>Export BattleReef backup</Text><Text style={styles.menuBody}>Versioned JSON archive of records and photo metadata for {selectedAquarium.name}</Text></View>
+            <View style={styles.menuText}><Text style={styles.menuTitle}>Export BattleReef backup</Text><Text style={styles.menuBody}>Versioned full backup of records and managed photo files for {selectedAquarium.name}</Text></View>
             <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
           </Pressable>
           <Pressable disabled={exporting} onPress={() => void runExport('csv')} style={styles.menuRow}>
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
             <View style={styles.menuText}><Text style={styles.menuTitle}>Restore BattleReef backup</Text><Text style={styles.menuBody}>Validate and import a BattleReef archive as a separate aquarium</Text></View>
             <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
           </Pressable>
-          <Text style={styles.dataNote}>Backups contain record data and photo references/metadata. Photo binary files remain stored locally and are not embedded in this Alpha archive.</Text>
+          <Text style={styles.dataNote}>Full backups include readable BattleReef-managed photo files plus their metadata. Missing or legacy photo references remain represented and are reported during restore.</Text>
         </>
       ) : null}
 
@@ -101,7 +101,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Alpha 0.17</Text>
+      <Text style={styles.version}>BattleReef Mobile · Alpha 0.18</Text>
     </Screen>
   );
 }

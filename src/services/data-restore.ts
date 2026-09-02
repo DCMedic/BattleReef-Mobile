@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { BACKUP_SCHEMA_VERSION, type BattleReefBackup } from '@/services/data-export';
+import { BACKUP_SCHEMA_VERSION, type BattleReefBackup, type BackupMediaEntry } from '@/services/data-export';
+import { deleteManagedMedia, restoreManagedMediaBase64, type ManagedMedia } from '@/services/media-storage';
 
 export type RestorePreview = {
   aquariumName: string;
@@ -16,6 +17,8 @@ export type RestorePreview = {
     targetOverrides: number;
     photos: number;
   };
+  mediaFiles: number;
+  mediaBytes: number;
   warnings: string[];
 };
 
@@ -62,10 +65,48 @@ export function parseAndValidateBackup(raw: string): BattleReefBackup {
     requireArray(value.data[key], key);
   }
 
+  if (value.schemaVersion >= 2) {
+    const media = requireArray(value.media, 'media');
+    const mediaPhotoIds = new Set<string>();
+    let totalMediaBytes = 0;
+
+    for (const entry of media) {
+      if (!isRecord(entry)) throw new Error('Backup media entry is invalid.');
+      if (!isString(entry.photoId) || !isString(entry.storageKey) || !isString(entry.mimeType) || !isString(entry.base64)) {
+        throw new Error('Backup media metadata is invalid.');
+      }
+      if (typeof entry.byteLength !== 'number' || !Number.isFinite(entry.byteLength) || entry.byteLength < 0) {
+        throw new Error('Backup media size is invalid.');
+      }
+      if (!entry.base64 || !/^[A-Za-z0-9+/=\r\n]+$/.test(entry.base64)) {
+        throw new Error('Backup contains an invalid media payload.');
+      }
+      if (mediaPhotoIds.has(entry.photoId)) throw new Error('Backup contains duplicate media for one photo.');
+      mediaPhotoIds.add(entry.photoId);
+
+      const estimatedBytes = Math.floor((entry.base64.replace(/[\r\n]/g, '').length * 3) / 4);
+      if (Math.abs(estimatedBytes - entry.byteLength) > 2) throw new Error('Backup media size verification failed.');
+      if (entry.byteLength > 100 * 1024 * 1024) throw new Error('A backup photo exceeds the supported 100 MB limit.');
+      totalMediaBytes += entry.byteLength;
+      if (totalMediaBytes > 500 * 1024 * 1024) throw new Error('Backup media exceeds the supported 500 MB total limit.');
+    }
+  }
+
   return value as unknown as BattleReefBackup;
 }
 
 export function previewBackup(backup: BattleReefBackup): RestorePreview {
+  const media = backup.media ?? [];
+  const restorablePhotoIds = new Set(media.map((entry) => entry.photoId));
+  const unavailablePhotos = backup.data.photos.filter((photo) => !restorablePhotoIds.has(photo.id)).length;
+
+  const warnings: string[] = [];
+  if (backup.schemaVersion < 2 && backup.data.photos.length > 0) {
+    warnings.push('This legacy backup contains photo metadata only. Image files will be marked unavailable.');
+  } else if (unavailablePhotos > 0) {
+    warnings.push(`${unavailablePhotos} photo record${unavailablePhotos === 1 ? '' : 's'} do not include restorable image data and will be marked unavailable.`);
+  }
+
   return {
     aquariumName: backup.data.aquarium.name,
     exportedAt: backup.exportedAt,
@@ -80,9 +121,9 @@ export function previewBackup(backup: BattleReefBackup): RestorePreview {
       targetOverrides: backup.data.targetOverrides.length,
       photos: backup.data.photos.length,
     },
-    warnings: backup.data.photos.length > 0
-      ? ['Photo metadata will be restored, but image files are not embedded in Alpha backups and will be marked unavailable.']
-      : [],
+    mediaFiles: media.length,
+    mediaBytes: media.reduce((total, entry) => total + entry.byteLength, 0),
+    warnings,
   };
 }
 
@@ -97,8 +138,21 @@ export async function restoreBackup(db: SQLiteDatabase, backup: BattleReefBackup
   const livestockIds = new Map(source.livestock.map((item) => [item.id, restoredId('livestock', item.id)]));
   const equipmentIds = new Map(source.equipment.map((item) => [item.id, restoredId('equipment', item.id)]));
   const taskIds = new Map(source.tasks.map((item) => [item.id, restoredId('task', item.id)]));
+  const restoredMedia = new Map<string, ManagedMedia>();
+  const createdMediaUris: string[] = [];
 
-  await db.withTransactionAsync(async () => {
+  try {
+    for (const entry of (backup.media ?? []) as BackupMediaEntry[]) {
+      const photoExists = source.photos.some((photo) => photo.id === entry.photoId);
+      if (!photoExists) throw new Error('Backup media references an unknown photo record.');
+
+      const managed = await restoreManagedMediaBase64(entry.storageKey, entry.base64);
+      restoredMedia.set(entry.photoId, managed);
+      createdMediaUris.push(managed.uri);
+    }
+
+    await db.withTransactionAsync(async () => {
+
     await db.runAsync(
       'INSERT INTO aquariums (id, name, type, volume_gallons, created_at) VALUES (?, ?, ?, ?, ?)',
       aquariumId, `${source.aquarium.name} (Restored)`, source.aquarium.type, source.aquarium.volumeGallons, source.aquarium.createdAt,
@@ -175,16 +229,24 @@ export async function restoreBackup(db: SQLiteDatabase, backup: BattleReefBackup
     }
 
     for (const photo of source.photos) {
+      const managed = restoredMedia.get(photo.id);
       await db.runAsync(
         `INSERT INTO photo_records
           (id, aquarium_id, uri, caption, linked_livestock_id, captured_at, created_at, storage_key, media_state, viewpoint, lighting_profile, guided_capture)
-          VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'missing', ?, ?, ?)`,
-        restoredId('photo', photo.id), aquariumId, photo.uri, photo.caption,
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        restoredId('photo', photo.id), aquariumId, managed?.uri ?? photo.uri, photo.caption,
         photo.linkedLivestockId ? livestockIds.get(photo.linkedLivestockId) ?? null : null,
-        photo.capturedAt, photo.createdAt, photo.viewpoint, photo.lightingProfile, photo.guidedCapture ? 1 : 0,
+        photo.capturedAt, photo.createdAt, managed?.storageKey ?? null, managed ? 'managed' : 'missing',
+        photo.viewpoint, photo.lightingProfile, photo.guidedCapture ? 1 : 0,
       );
     }
-  });
+    });
 
-  return aquariumId;
+    return aquariumId;
+  } catch (error) {
+    for (const uri of createdMediaUris) {
+      await deleteManagedMedia(uri);
+    }
+    throw error;
+  }
 }
