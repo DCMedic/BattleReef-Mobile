@@ -2,7 +2,7 @@
   "expo": {
     "name": "BattleReef",
     "slug": "battlereef-mobile",
-    "version": "0.1.0",
+    "version": "0.9.0",
     "orientation": "portrait",
     "icon": "./assets/brand/app-icon.png",
     "scheme": "battlereef",
@@ -10,7 +10,16 @@
     "ios": {
       "icon": "./assets/brand/app-icon.png",
       "bundleIdentifier": "com.battlereef.mobile",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": []
+      }
     },
     "android": {
       "package": "com.battlereef.mobile",
@@ -20,7 +29,8 @@
         "backgroundImage": "./assets/brand/adaptive-background.png",
         "monochromeImage": "./assets/brand/adaptive-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -57,6 +67,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
