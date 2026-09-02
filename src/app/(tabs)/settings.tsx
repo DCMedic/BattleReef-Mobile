@@ -84,6 +84,11 @@ export default function SettingsScreen() {
             <View style={styles.menuText}><Text style={styles.menuTitle}>Export water tests as CSV</Text><Text style={styles.menuBody}>Portable spreadsheet-friendly history with values, timestamps, sources, and notes</Text></View>
             <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
           </Pressable>
+          <Pressable onPress={() => router.push('/backup/restore')} style={styles.menuRow}>
+            <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="cloud-upload-outline" size={21} /></View>
+            <View style={styles.menuText}><Text style={styles.menuTitle}>Restore BattleReef backup</Text><Text style={styles.menuBody}>Validate and import a BattleReef archive as a separate aquarium</Text></View>
+            <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
+          </Pressable>
           <Text style={styles.dataNote}>Backups contain record data and photo references/metadata. Photo binary files remain stored locally and are not embedded in this Alpha archive.</Text>
         </>
       ) : null}
@@ -96,7 +101,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Alpha 0.3</Text>
+      <Text style={styles.version}>BattleReef Mobile · Alpha 0.17</Text>
     </Screen>
   );
 }
