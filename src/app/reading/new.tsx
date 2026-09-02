@@ -6,14 +6,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FormScreen } from '@/components/app/form-screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
-import { getApplicableParameters, getTargetRange } from '@/domain/context';
+import { getApplicableParameters, getEffectiveTargetRange } from '@/domain/context';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { validateReading } from '@/domain/validation';
 import { useAppData } from '@/providers/app-data-provider';
 
 export default function NewReadingScreen() {
   const router = useRouter();
-  const { addReading, selectedAquarium } = useAppData();
+  const { addReading, selectedAquarium, targetOverrides } = useAppData();
   const parameters = useMemo(
     () => selectedAquarium
       ? getApplicableParameters(selectedAquarium.type)
@@ -35,7 +35,7 @@ export default function NewReadingScreen() {
   const validation = validateReading(draft);
   const valid = Boolean(selectedAquarium) && value.trim() !== '' && validation.valid;
   const definition = parameterCatalog[selectedParameter];
-  const target = selectedAquarium ? getTargetRange(selectedAquarium.type, selectedParameter) : null;
+  const target = selectedAquarium ? getEffectiveTargetRange(selectedAquarium.id, selectedAquarium.type, selectedParameter, targetOverrides) : null;
 
   async function save() {
     if (!valid || saving) return;

@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -17,7 +17,6 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         volume_gallons REAL NOT NULL CHECK (volume_gallons > 0),
         created_at TEXT NOT NULL
       );
-
       CREATE TABLE IF NOT EXISTS parameter_readings (
         id TEXT PRIMARY KEY NOT NULL,
         aquarium_id TEXT NOT NULL,
@@ -28,10 +27,7 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         note TEXT,
         FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
       );
-
-      CREATE INDEX IF NOT EXISTS idx_readings_aquarium_recorded
-        ON parameter_readings(aquarium_id, recorded_at DESC);
-
+      CREATE INDEX IF NOT EXISTS idx_readings_aquarium_recorded ON parameter_readings(aquarium_id, recorded_at DESC);
       CREATE TABLE IF NOT EXISTS maintenance_tasks (
         id TEXT PRIMARY KEY NOT NULL,
         aquarium_id TEXT NOT NULL,
@@ -41,28 +37,32 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         created_at TEXT NOT NULL,
         FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
       );
-
-      CREATE INDEX IF NOT EXISTS idx_tasks_aquarium_due
-        ON maintenance_tasks(aquarium_id, due_at);
-
-      CREATE TABLE IF NOT EXISTS app_preferences (
-        key TEXT PRIMARY KEY NOT NULL,
-        value TEXT NOT NULL
-      );
+      CREATE INDEX IF NOT EXISTS idx_tasks_aquarium_due ON maintenance_tasks(aquarium_id, due_at);
+      CREATE TABLE IF NOT EXISTS app_preferences (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
     `);
   }
 
   if (currentVersion < 2) {
     await db.execAsync(`
-      ALTER TABLE parameter_readings
-        ADD COLUMN source TEXT NOT NULL DEFAULT 'manual_user';
-      ALTER TABLE parameter_readings
-        ADD COLUMN confidence REAL;
-      ALTER TABLE parameter_readings
-        ADD COLUMN confirmed_at TEXT;
+      ALTER TABLE parameter_readings ADD COLUMN source TEXT NOT NULL DEFAULT 'manual_user';
+      ALTER TABLE parameter_readings ADD COLUMN confidence REAL;
+      ALTER TABLE parameter_readings ADD COLUMN confirmed_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_readings_aquarium_parameter_recorded ON parameter_readings(aquarium_id, parameter, recorded_at DESC);
+    `);
+  }
 
-      CREATE INDEX IF NOT EXISTS idx_readings_aquarium_parameter_recorded
-        ON parameter_readings(aquarium_id, parameter, recorded_at DESC);
+  if (currentVersion < 3) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS target_overrides (
+        aquarium_id TEXT NOT NULL,
+        parameter TEXT NOT NULL,
+        min_value REAL NOT NULL,
+        max_value REAL NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (aquarium_id, parameter),
+        FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE,
+        CHECK (min_value <= max_value)
+      );
     `);
   }
 
