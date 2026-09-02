@@ -1,7 +1,7 @@
 {
   "name": "battlereef-mobile",
   "main": "expo-router/entry",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.19",
@@ -41,7 +41,9 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "export:web": "expo export --platform web"
+    "export:web": "expo export --platform web",
+    "config:check": "expo config --type public > /dev/null",
+    "beta:check": "npm run typecheck && npm run lint && npm run doctor && npm run config:check && npm run export:web"
   },
   "private": true
 }
