@@ -41,5 +41,8 @@ jobs:
       - name: Expo Doctor
         run: npm run doctor
 
+      - name: Validate Expo config
+        run: npm run config:check
+
       - name: Export web bundle
         run: npm run export:web
