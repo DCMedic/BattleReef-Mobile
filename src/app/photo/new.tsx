@@ -39,7 +39,10 @@ export default function NewPhotoScreen() {
       quality: 0.9,
       allowsMultipleSelection: false,
     });
-    if (!result.canceled) setUri(result.assets[0]?.uri ?? '');
+    if (!result.canceled) {
+      setUri(result.assets[0]?.uri ?? '');
+      setGuidedCapture(false);
+    }
   }
 
   async function takePhoto() {
