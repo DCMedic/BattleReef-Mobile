@@ -9,6 +9,8 @@ import {
   type Equipment,
   type EquipmentKind,
   type EquipmentStatus,
+  type InventoryEvent,
+  type InventoryEventKind,
   type HusbandryEventKind,
   type AquariumType,
   type MaintenanceTask,
@@ -33,6 +35,7 @@ type TargetRow = { aquarium_id: string; parameter: string; min_value: number; ma
 type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at: string; amount: number | null; unit: string | null; subject: string | null; note: string | null; created_at: string };
 type LivestockRow = { id: string; aquarium_id: string; name: string; species: string | null; kind: string; quantity: number; status: string; acquired_at: string | null; note: string | null; created_at: string };
 type EquipmentRow = { id: string; aquarium_id: string; name: string; manufacturer: string | null; model: string | null; kind: string; status: string; installed_at: string | null; warranty_ends_at: string | null; note: string | null; created_at: string };
+type InventoryEventRow = { id: string; aquarium_id: string; entity_type: string; entity_id: string; kind: string; from_status: string | null; to_status: string | null; note: string | null; occurred_at: string; created_at: string };
 
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -306,4 +309,93 @@ export async function createEquipment(db: SQLiteDatabase, aquariumId: string, in
     item.id, item.aquariumId, item.name, item.manufacturer, item.model, item.kind, item.status, item.installedAt, item.warrantyEndsAt, item.note, item.createdAt,
   );
   return item;
+}
+
+
+function mapInventoryEvent(row: InventoryEventRow): InventoryEvent {
+  return {
+    id: row.id,
+    aquariumId: row.aquarium_id,
+    entityType: row.entity_type as 'livestock' | 'equipment',
+    entityId: row.entity_id,
+    kind: row.kind as InventoryEventKind,
+    fromStatus: row.from_status,
+    toStatus: row.to_status,
+    note: row.note,
+    occurredAt: row.occurred_at,
+    createdAt: row.created_at,
+  };
+}
+
+export async function listInventoryEvents(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<InventoryEventRow>(
+    'SELECT * FROM inventory_events WHERE aquarium_id = ? ORDER BY occurred_at DESC LIMIT 250',
+    aquariumId,
+  );
+  return rows.map(mapInventoryEvent);
+}
+
+async function recordInventoryEvent(
+  db: SQLiteDatabase,
+  aquariumId: string,
+  entityType: 'livestock' | 'equipment',
+  entityId: string,
+  kind: InventoryEventKind,
+  fromStatus: string | null,
+  toStatus: string | null,
+  note: string | null,
+) {
+  const now = new Date().toISOString();
+  const event: InventoryEvent = {
+    id: createId('inventory_event'),
+    aquariumId,
+    entityType,
+    entityId,
+    kind,
+    fromStatus,
+    toStatus,
+    note: note?.trim() || null,
+    occurredAt: now,
+    createdAt: now,
+  };
+  await db.runAsync(
+    `INSERT INTO inventory_events
+      (id, aquarium_id, entity_type, entity_id, kind, from_status, to_status, note, occurred_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    event.id, event.aquariumId, event.entityType, event.entityId, event.kind,
+    event.fromStatus, event.toStatus, event.note, event.occurredAt, event.createdAt,
+  );
+  return event;
+}
+
+export async function updateLivestockStatus(
+  db: SQLiteDatabase,
+  item: Livestock,
+  status: LivestockStatus,
+  note?: string,
+) {
+  if (item.status === status) return;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE livestock SET status = ? WHERE id = ?', status, item.id);
+    await recordInventoryEvent(db, item.aquariumId, 'livestock', item.id, 'status_change', item.status, status, note ?? null);
+  });
+}
+
+export async function updateEquipmentStatus(
+  db: SQLiteDatabase,
+  item: Equipment,
+  status: EquipmentStatus,
+  note?: string,
+) {
+  if (item.status === status) return;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE equipment SET status = ? WHERE id = ?', status, item.id);
+    await recordInventoryEvent(db, item.aquariumId, 'equipment', item.id, 'status_change', item.status, status, note ?? null);
+  });
+}
+
+export async function recordEquipmentService(db: SQLiteDatabase, item: Equipment, note: string) {
+  const clean = note.trim();
+  if (clean.length < 2 || clean.length > 240) throw new Error('Service note must contain between 2 and 240 characters.');
+  await recordInventoryEvent(db, item.aquariumId, 'equipment', item.id, 'service', item.status, item.status, clean);
 }
