@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 9;
+const DATABASE_VERSION = 10;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -175,6 +175,16 @@ export async function migrateDatabase(db: SQLiteDatabase) {
       ALTER TABLE photo_records ADD COLUMN lighting_profile TEXT;
       ALTER TABLE photo_records ADD COLUMN guided_capture INTEGER NOT NULL DEFAULT 0
         CHECK (guided_capture IN (0, 1));
+    `);
+  }
+
+  if (currentVersion < 10) {
+    await db.execAsync(`
+      ALTER TABLE maintenance_tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'
+        CHECK (recurrence IN ('none', 'daily', 'weekly', 'monthly'));
+      ALTER TABLE maintenance_tasks ADD COLUMN notification_id TEXT;
+      ALTER TABLE maintenance_tasks ADD COLUMN parent_task_id TEXT;
+      CREATE INDEX IF NOT EXISTS idx_tasks_parent ON maintenance_tasks(parent_task_id, created_at DESC);
     `);
   }
 
