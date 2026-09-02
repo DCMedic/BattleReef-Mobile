@@ -179,7 +179,7 @@ export async function setTaskNotificationId(db: SQLiteDatabase, taskId: string, 
   await db.runAsync('UPDATE maintenance_tasks SET notification_id = ? WHERE id = ?', notificationId, taskId);
 }
 
-export async function completeTask(db: SQLiteDatabase, task: MaintenanceTask, nextDueAt: string | null) {
+export async function completeTask(db: SQLiteDatabase, task: MaintenanceTask, nextDueAt: string | null): Promise<MaintenanceTask | null> {
   if (task.completedAt) return null;
   const completedAt = new Date().toISOString();
 
