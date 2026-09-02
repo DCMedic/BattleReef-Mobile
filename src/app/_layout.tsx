@@ -26,6 +26,8 @@ export default function RootLayout() {
             <Stack.Screen name="analysis/change" options={{ title: 'What changed?' }} />
             <Stack.Screen name="analysis/trend" options={{ title: 'Parameter trend' }} />
             <Stack.Screen name="analysis/advisory" options={{ title: 'Advisory' }} />
+            <Stack.Screen name="livestock/new" options={{ title: 'Add livestock', presentation: 'modal' }} />
+            <Stack.Screen name="equipment/new" options={{ title: 'Add equipment', presentation: 'modal' }} />
           </Stack>
         </ThemeProvider>
       </AppDataProvider>

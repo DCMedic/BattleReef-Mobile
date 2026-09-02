@@ -4,12 +4,16 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 import {
   createAquarium as insertAquarium,
   createHusbandryEvent as insertHusbandryEvent,
+  createLivestock as insertLivestock,
+  createEquipment as insertEquipment,
   createReading as insertReading,
   createTask as insertTask,
   deleteTargetOverride as removeTargetOverride,
   getSelectedAquariumId,
   listAquariums,
   listHusbandryEvents,
+  listLivestock,
+  listEquipment,
   listReadings,
   listTargetOverrides,
   listTasks,
@@ -20,9 +24,13 @@ import {
 import type {
   Aquarium,
   HusbandryEvent,
+  Livestock,
+  Equipment,
   MaintenanceTask,
   NewAquarium,
   NewHusbandryEvent,
+  NewLivestock,
+  NewEquipment,
   NewReading,
   NewTask,
   ParameterKey,
@@ -37,12 +45,16 @@ type AppDataValue = {
   readings: ParameterReading[];
   tasks: MaintenanceTask[];
   husbandryEvents: HusbandryEvent[];
+  livestock: Livestock[];
+  equipment: Equipment[];
   targetOverrides: TargetOverride[];
   selectAquarium: (aquariumId: string) => Promise<void>;
   addAquarium: (input: NewAquarium) => Promise<void>;
   addReading: (input: NewReading) => Promise<void>;
   addTask: (input: NewTask) => Promise<void>;
   addHusbandryEvent: (input: NewHusbandryEvent) => Promise<void>;
+  addLivestock: (input: NewLivestock) => Promise<void>;
+  addEquipment: (input: NewEquipment) => Promise<void>;
   toggleTask: (task: MaintenanceTask) => Promise<void>;
   saveTargetOverride: (parameter: ParameterKey, min: number, max: number) => Promise<void>;
   resetTargetOverride: (parameter: ParameterKey) => Promise<void>;
@@ -58,6 +70,8 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const [readings, setReadings] = useState<ParameterReading[]>([]);
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [husbandryEvents, setHusbandryEvents] = useState<HusbandryEvent[]>([]);
+  const [livestock, setLivestock] = useState<Livestock[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [targetOverrides, setTargetOverrides] = useState<TargetOverride[]>([]);
 
   const loadDetails = useCallback(async (aquariumId: string | null) => {
@@ -65,19 +79,25 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       setReadings([]);
       setTasks([]);
       setHusbandryEvents([]);
+      setLivestock([]);
+      setEquipment([]);
       setTargetOverrides([]);
       return;
     }
-    const [nextReadings, nextTasks, nextEvents, nextOverrides] = await Promise.all([
+    const [nextReadings, nextTasks, nextEvents, nextOverrides, nextLivestock, nextEquipment] = await Promise.all([
       listReadings(db, aquariumId),
       listTasks(db, aquariumId),
       listHusbandryEvents(db, aquariumId),
       listTargetOverrides(db, aquariumId),
+      listLivestock(db, aquariumId),
+      listEquipment(db, aquariumId),
     ]);
     setReadings(nextReadings);
     setTasks(nextTasks);
     setHusbandryEvents(nextEvents);
     setTargetOverrides(nextOverrides);
+    setLivestock(nextLivestock);
+    setEquipment(nextEquipment);
   }, [db]);
 
   const bootstrap = useCallback(async () => {
@@ -125,6 +145,18 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     setHusbandryEvents(await listHusbandryEvents(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
+  const addLivestock = useCallback(async (input: NewLivestock) => {
+    if (!selectedAquariumId) throw new Error('Create an aquarium before adding livestock.');
+    await insertLivestock(db, selectedAquariumId, input);
+    setLivestock(await listLivestock(db, selectedAquariumId));
+  }, [db, selectedAquariumId]);
+
+  const addEquipment = useCallback(async (input: NewEquipment) => {
+    if (!selectedAquariumId) throw new Error('Create an aquarium before adding equipment.');
+    await insertEquipment(db, selectedAquariumId, input);
+    setEquipment(await listEquipment(db, selectedAquariumId));
+  }, [db, selectedAquariumId]);
+
   const toggleTask = useCallback(async (task: MaintenanceTask) => {
     await updateTask(db, task);
     if (selectedAquariumId) setTasks(await listTasks(db, selectedAquariumId));
@@ -148,11 +180,11 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<AppDataValue>(() => ({
-    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, targetOverrides,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, toggleTask, saveTargetOverride, resetTargetOverride,
+    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, targetOverrides,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, toggleTask, saveTargetOverride, resetTargetOverride,
   }), [
-    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, targetOverrides,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, toggleTask, saveTargetOverride, resetTargetOverride,
+    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, targetOverrides,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, toggleTask, saveTargetOverride, resetTargetOverride,
   ]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
