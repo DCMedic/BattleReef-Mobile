@@ -32,6 +32,7 @@ export default function RootLayout() {
             <Stack.Screen name="equipment/[id]" options={{ title: 'Equipment' }} />
             <Stack.Screen name="photos" options={{ title: 'Photos' }} />
             <Stack.Screen name="photo/new" options={{ title: 'Add photo', presentation: 'modal' }} />
+            <Stack.Screen name="photo/compare" options={{ title: 'Compare photos' }} />
           </Stack>
         </ThemeProvider>
       </AppDataProvider>
