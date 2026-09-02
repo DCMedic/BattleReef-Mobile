@@ -31,6 +31,7 @@ import {
   recordEquipmentService as persistEquipmentService,
 } from '@/data/repository';
 import { cancelTaskReminder, nextRecurringDue, scheduleTaskReminder } from '@/services/task-reminders';
+import { restoreBackup, type BattleReefBackup } from '@/services/data-restore';
 import type {
   Aquarium,
   HusbandryEvent,
@@ -80,6 +81,7 @@ type AppDataValue = {
   toggleTask: (task: MaintenanceTask) => Promise<void>;
   saveTargetOverride: (parameter: ParameterKey, min: number, max: number) => Promise<void>;
   resetTargetOverride: (parameter: ParameterKey) => Promise<void>;
+  restoreBackupArchive: (backup: BattleReefBackup) => Promise<void>;
 };
 
 const AppDataContext = createContext<AppDataValue | null>(null);
@@ -250,6 +252,23 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     setTargetOverrides(await listTargetOverrides(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
+  const restoreBackupArchive = useCallback(async (backup: BattleReefBackup) => {
+    const restoredAquariumId = await restoreBackup(db, backup);
+    const restoredTasks = await listTasks(db, restoredAquariumId);
+
+    for (const task of restoredTasks) {
+      if (!task.completedAt && task.dueAt) {
+        const notificationId = await scheduleTaskReminder(task);
+        if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+      }
+    }
+
+    setAquariums(await listAquariums(db));
+    setSelectedAquariumId(restoredAquariumId);
+    await saveSelectedAquariumId(db, restoredAquariumId);
+    await loadDetails(restoredAquariumId);
+  }, [db, loadDetails]);
+
   const selectedAquarium = useMemo(
     () => aquariums.find((item) => item.id === selectedAquariumId) ?? null,
     [aquariums, selectedAquariumId],
@@ -257,10 +276,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AppDataValue>(() => ({
     loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
   }), [
     loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
   ]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
