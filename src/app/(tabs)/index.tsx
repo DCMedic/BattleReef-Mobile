@@ -6,6 +6,7 @@ import { Screen } from '@/components/app/screen';
 import { Card, EmptyState, IconButton, LoadingState, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { getDelta, getEffectiveTargetRange, getPreviousReading, getRangeStatusForTarget } from '@/domain/context';
+import { buildAdvisories } from '@/domain/advisories';
 import { findMaterialChanges } from '@/domain/change-analysis';
 import { calculateStabilityScore } from '@/domain/stability';
 import { analyzeTrend } from '@/domain/trend-analysis';
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const openTasks = tasks.filter((task) => !task.completedAt).length;
   const stability = selectedAquarium ? calculateStabilityScore(selectedAquarium, readings, targetOverrides) : null;
   const materialChanges = findMaterialChanges(readings, husbandryEvents, tasks);
+  const advisories = selectedAquarium ? buildAdvisories(selectedAquarium, readings, targetOverrides) : [];
 
   return (
     <Screen
@@ -125,6 +127,38 @@ export default function HomeScreen() {
               <Text style={styles.actionBody}>Water change, feeding, dosing, or observation</Text>
             </Pressable>
           </View>
+
+          {advisories.length > 0 ? (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Advisories</Text>
+                <Text style={styles.advisoryCount}>{advisories.length} active</Text>
+              </View>
+              {advisories.slice(0, 2).map((advisory) => (
+                <Pressable
+                  key={advisory.parameter}
+                  onPress={() => router.push({ pathname: '/analysis/advisory', params: { parameter: advisory.parameter } })}
+                  style={[
+                    styles.advisoryCard,
+                    advisory.severity === 'attention' && styles.advisoryCardAttention,
+                  ]}>
+                  <View style={styles.advisoryIcon}>
+                    <Ionicons
+                      color={advisory.severity === 'attention' ? Brand.red : Brand.amber}
+                      name="alert-circle-outline"
+                      size={22}
+                    />
+                  </View>
+                  <View style={styles.insightBody}>
+                    <Text style={styles.insightTitle}>{advisory.title}</Text>
+                    <Text style={styles.insightText}>{advisory.summary}</Text>
+                    <Text style={styles.insightMeta}>{advisory.evidence.length} evidence point{advisory.evidence.length === 1 ? '' : 's'}</Text>
+                  </View>
+                  <Ionicons color={Brand.textFaint} name="chevron-forward" size={18} />
+                </Pressable>
+              ))}
+            </>
+          ) : null}
 
           {materialChanges.length > 0 ? (
             <>
@@ -261,6 +295,10 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   sectionTitle: { color: Brand.text, fontSize: 19, fontWeight: '800' },
   insightCount: { color: Brand.cyan, fontSize: 11, fontWeight: '900' },
+  advisoryCount: { color: Brand.amber, fontSize: 11, fontWeight: '900' },
+  advisoryCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#2A2118', borderColor: '#6A4C22', borderWidth: 1, borderRadius: 17, padding: 14 },
+  advisoryCardAttention: { backgroundColor: '#2C1719', borderColor: '#713338' },
+  advisoryIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#3A2816', alignItems: 'center', justifyContent: 'center' },
   insightCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 17, padding: 14 },
   insightIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: Brand.cyanSoft, alignItems: 'center', justifyContent: 'center' },
   insightBody: { flex: 1 },
