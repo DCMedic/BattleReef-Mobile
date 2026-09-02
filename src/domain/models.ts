@@ -155,8 +155,10 @@ export type PhotoRecord = {
   linkedLivestockId: string | null;
   capturedAt: string;
   createdAt: string;
+  storageKey: string | null;
+  mediaState: 'managed' | 'legacy' | 'missing';
 };
 
-export type NewPhotoRecord = Pick<PhotoRecord, 'uri' | 'caption' | 'linkedLivestockId'> & {
+export type NewPhotoRecord = Pick<PhotoRecord, 'uri' | 'caption' | 'linkedLivestockId' | 'storageKey' | 'mediaState'> & {
   capturedAt?: string;
 };
