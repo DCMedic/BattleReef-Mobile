@@ -24,6 +24,7 @@ export default function RootLayout() {
             <Stack.Screen name="event/new" options={{ title: 'Log activity', presentation: 'modal' }} />
             <Stack.Screen name="targets" options={{ title: 'Parameter targets' }} />
             <Stack.Screen name="analysis/change" options={{ title: 'What changed?' }} />
+            <Stack.Screen name="analysis/trend" options={{ title: 'Parameter trend' }} />
           </Stack>
         </ThemeProvider>
       </AppDataProvider>
