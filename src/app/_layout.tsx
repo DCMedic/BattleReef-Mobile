@@ -56,6 +56,7 @@ export default function RootLayout() {
             <Stack.Screen name="photo/new" options={{ title: 'Add photo', presentation: 'modal' }} />
             <Stack.Screen name="photo/compare" options={{ title: 'Compare photos' }} />
             <Stack.Screen name="photo/series" options={{ title: 'Visual history' }} />
+            <Stack.Screen name="backup/restore" options={{ title: 'Restore backup' }} />
           </Stack>
         </ThemeProvider>
       </AppDataProvider>
