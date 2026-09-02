@@ -21,6 +21,16 @@ export default function PhotosScreen() {
       ) : undefined}
       subtitle={selectedAquarium ? `${selectedAquarium.name} · visual history` : 'Aquarium visual history'}
       title="Photos">
+      {selectedAquarium && photos.filter((photo) => photo.mediaState !== 'missing').length >= 2 ? (
+        <Pressable onPress={() => router.push('/photo/compare')} style={styles.compareAction}>
+          <View style={styles.compareIcon}><Ionicons color={Brand.cyan} name="git-compare-outline" size={21} /></View>
+          <View style={styles.compareText}>
+            <Text style={styles.compareTitle}>Compare progress</Text>
+            <Text style={styles.compareBody}>Place two photos side by side to inspect visual change over time.</Text>
+          </View>
+          <Ionicons color={Brand.textFaint} name="chevron-forward" size={18} />
+        </Pressable>
+      ) : null}
       {!selectedAquarium ? (
         <EmptyState body="Create an aquarium before building a photo timeline." icon="images-outline" title="No aquarium selected" />
       ) : photos.length === 0 ? (
@@ -67,6 +77,11 @@ export default function PhotosScreen() {
 
 const styles = StyleSheet.create({
   add: { width: 44, height: 44, borderRadius: 14, backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border, alignItems: 'center', justifyContent: 'center' },
+  compareAction: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 14, borderRadius: 16, backgroundColor: Brand.cyanSoft, borderWidth: 1, borderColor: Brand.border },
+  compareIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: Brand.surface, alignItems: 'center', justifyContent: 'center' },
+  compareText: { flex: 1, gap: 2 },
+  compareTitle: { color: Brand.text, fontSize: 13, fontWeight: '900' },
+  compareBody: { color: Brand.textMuted, fontSize: 10, lineHeight: 15 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: { width: '48%', flexGrow: 1, maxWidth: 360, backgroundColor: Brand.surface, borderRadius: 17, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
   image: { width: '100%', aspectRatio: 1.15, backgroundColor: Brand.surfaceRaised },
