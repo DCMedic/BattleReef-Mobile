@@ -1,11 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View, Alert } from 'react-native';
 
 import { Screen } from '@/components/app/screen';
 import { Card } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { useAppData } from '@/providers/app-data-provider';
+import { exportBackup, exportReadingsCsv } from '@/services/data-export';
 
 const roadmap = [
   { icon: 'phone-portrait-outline' as const, title: 'Standalone by design', body: 'Logging, maintenance, and insights work without aquarium hardware.' },
@@ -16,7 +18,25 @@ const roadmap = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { aquariums, selectedAquarium } = useAppData();
+  const { aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos } = useAppData();
+  const [exporting, setExporting] = useState(false);
+
+  const exportData = selectedAquarium ? {
+    aquarium: selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
+  } : null;
+
+  async function runExport(kind: 'backup' | 'csv') {
+    if (!exportData || exporting) return;
+    setExporting(true);
+    try {
+      if (kind === 'backup') await exportBackup(exportData);
+      else await exportReadingsCsv(exportData);
+    } catch (caught) {
+      Alert.alert('Export unavailable', caught instanceof Error ? caught.message : 'Could not export BattleReef data.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Screen subtitle="Account, aquariums, and product information" title="More">
@@ -51,6 +71,23 @@ export default function SettingsScreen() {
         </Pressable>
       ) : null}
 
+      {selectedAquarium ? (
+        <>
+          <Text style={styles.sectionTitle}>Your data</Text>
+          <Pressable disabled={exporting} onPress={() => void runExport('backup')} style={styles.menuRow}>
+            <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="archive-outline" size={21} /></View>
+            <View style={styles.menuText}><Text style={styles.menuTitle}>Export BattleReef backup</Text><Text style={styles.menuBody}>Versioned JSON archive of records and photo metadata for {selectedAquarium.name}</Text></View>
+            <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
+          </Pressable>
+          <Pressable disabled={exporting} onPress={() => void runExport('csv')} style={styles.menuRow}>
+            <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="document-text-outline" size={21} /></View>
+            <View style={styles.menuText}><Text style={styles.menuTitle}>Export water tests as CSV</Text><Text style={styles.menuBody}>Portable spreadsheet-friendly history with values, timestamps, sources, and notes</Text></View>
+            <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
+          </Pressable>
+          <Text style={styles.dataNote}>Backups contain record data and photo references/metadata. Photo binary files remain stored locally and are not embedded in this Alpha archive.</Text>
+        </>
+      ) : null}
+
       <Text style={styles.sectionTitle}>Architecture guardrails</Text>
       {roadmap.map((item) => (
         <View key={item.title} style={styles.menuRow}>
@@ -81,5 +118,6 @@ const styles = StyleSheet.create({
   menuText: { flex: 1 },
   menuTitle: { color: Brand.text, fontSize: 14, fontWeight: '800' },
   menuBody: { color: Brand.textMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  dataNote: { color: Brand.textFaint, fontSize: 11, lineHeight: 17, paddingHorizontal: 3 },
   version: { color: Brand.textFaint, fontSize: 11, textAlign: 'center', marginTop: 10 },
 });
