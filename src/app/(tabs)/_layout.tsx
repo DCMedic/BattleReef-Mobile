@@ -34,6 +34,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home-outline') }} />
       <Tabs.Screen name="logbook" options={{ title: 'Timeline', tabBarIcon: icon('time-outline') }} />
       <Tabs.Screen name="tasks" options={{ title: 'Tasks', tabBarIcon: icon('checkmark-circle-outline') }} />
+      <Tabs.Screen name="inventory" options={{ title: 'Inventory', tabBarIcon: icon('cube-outline') }} />
       <Tabs.Screen name="settings" options={{ title: 'More', tabBarIcon: icon('grid-outline') }} />
     </Tabs>
   );
