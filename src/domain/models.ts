@@ -145,3 +145,18 @@ export type InventoryEvent = {
   occurredAt: string;
   createdAt: string;
 };
+
+
+export type PhotoRecord = {
+  id: string;
+  aquariumId: string;
+  uri: string;
+  caption: string | null;
+  linkedLivestockId: string | null;
+  capturedAt: string;
+  createdAt: string;
+};
+
+export type NewPhotoRecord = Pick<PhotoRecord, 'uri' | 'caption' | 'linkedLivestockId'> & {
+  capturedAt?: string;
+};
