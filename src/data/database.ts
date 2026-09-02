@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 8;
+const DATABASE_VERSION = 9;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -166,6 +166,15 @@ export async function migrateDatabase(db: SQLiteDatabase) {
       ALTER TABLE photo_records ADD COLUMN storage_key TEXT;
       ALTER TABLE photo_records ADD COLUMN media_state TEXT NOT NULL DEFAULT 'legacy'
         CHECK (media_state IN ('managed', 'legacy', 'missing'));
+    `);
+  }
+
+  if (currentVersion < 9) {
+    await db.execAsync(`
+      ALTER TABLE photo_records ADD COLUMN viewpoint TEXT;
+      ALTER TABLE photo_records ADD COLUMN lighting_profile TEXT;
+      ALTER TABLE photo_records ADD COLUMN guided_capture INTEGER NOT NULL DEFAULT 0
+        CHECK (guided_capture IN (0, 1));
     `);
   }
 
