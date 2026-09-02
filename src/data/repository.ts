@@ -10,7 +10,9 @@ import {
   parameterCatalog,
   type ParameterKey,
   type ParameterReading,
+  type ReadingSource,
 } from '@/domain/models';
+import { validateAquarium, validateReading } from '@/domain/validation';
 
 type AquariumRow = {
   id: string;
@@ -28,6 +30,9 @@ type ReadingRow = {
   unit: string;
   recorded_at: string;
   note: string | null;
+  source: string;
+  confidence: number | null;
+  confirmed_at: string | null;
 };
 
 type TaskRow = {
@@ -62,6 +67,9 @@ function mapReading(row: ReadingRow): ParameterReading {
     unit: row.unit,
     recordedAt: row.recorded_at,
     note: row.note,
+    source: row.source as ReadingSource,
+    confidence: row.confidence,
+    confirmedAt: row.confirmed_at,
   };
 }
 
@@ -82,6 +90,9 @@ export async function listAquariums(db: SQLiteDatabase) {
 }
 
 export async function createAquarium(db: SQLiteDatabase, input: NewAquarium) {
+  const validation = validateAquarium(input);
+  if (!validation.valid) throw new Error(validation.message);
+
   const aquarium: Aquarium = {
     id: createId('aq'),
     name: input.name.trim(),
@@ -115,20 +126,27 @@ export async function createReading(
   aquariumId: string,
   input: NewReading,
 ) {
+  const validation = validateReading(input);
+  if (!validation.valid) throw new Error(validation.message);
+
+  const now = new Date().toISOString();
   const reading: ParameterReading = {
     id: createId('reading'),
     aquariumId,
     parameter: input.parameter,
     value: input.value,
     unit: parameterCatalog[input.parameter].unit,
-    recordedAt: new Date().toISOString(),
+    recordedAt: input.recordedAt ?? now,
     note: input.note?.trim() || null,
+    source: 'manual_user',
+    confidence: null,
+    confirmedAt: now,
   };
 
   await db.runAsync(
     `INSERT INTO parameter_readings
-      (id, aquarium_id, parameter, value, unit, recorded_at, note)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      (id, aquarium_id, parameter, value, unit, recorded_at, note, source, confidence, confirmed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     reading.id,
     reading.aquariumId,
     reading.parameter,
@@ -136,6 +154,9 @@ export async function createReading(
     reading.unit,
     reading.recordedAt,
     reading.note,
+    reading.source,
+    reading.confidence,
+    reading.confirmedAt,
   );
 
   return reading;
@@ -152,10 +173,15 @@ export async function listTasks(db: SQLiteDatabase, aquariumId: string) {
 }
 
 export async function createTask(db: SQLiteDatabase, aquariumId: string, input: NewTask) {
+  const title = input.title.trim();
+  if (title.length < 2 || title.length > 120) {
+    throw new Error('Task title must contain between 2 and 120 characters.');
+  }
+
   const task: MaintenanceTask = {
     id: createId('task'),
     aquariumId,
-    title: input.title.trim(),
+    title,
     dueAt: input.dueAt,
     completedAt: null,
     createdAt: new Date().toISOString(),

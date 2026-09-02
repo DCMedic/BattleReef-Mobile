@@ -9,6 +9,14 @@ import { parameterCatalog } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
 
+const sourceLabels = {
+  manual_user: 'Manual',
+  photo_interpreted: 'Photo',
+  imported: 'Imported',
+  calculated: 'Calculated',
+  brmc_telemetry: 'BRMC',
+} as const;
+
 export default function LogbookScreen() {
   const router = useRouter();
   const { loading, readings, selectedAquarium } = useAppData();
@@ -16,8 +24,8 @@ export default function LogbookScreen() {
   return (
     <Screen
       action={selectedAquarium ? <IconButton icon="add" label="Log reading" onPress={() => router.push('/reading/new')} /> : undefined}
-      subtitle={selectedAquarium ? `${selectedAquarium.name} · newest first` : 'Water parameters and observations'}
-      title="Logbook">
+      subtitle={selectedAquarium ? `${selectedAquarium.name} · ${readings.length} reading${readings.length === 1 ? '' : 's'} · newest first` : 'Water parameters and observations'}
+      title="History">
       {loading ? <LoadingState /> : null}
       {!loading && !selectedAquarium ? (
         <EmptyState
@@ -41,7 +49,12 @@ export default function LogbookScreen() {
             <Ionicons color={Brand.cyan} name={parameterCatalog[reading.parameter].icon} size={20} />
           </View>
           <View style={styles.details}>
-            <Text style={styles.label}>{parameterCatalog[reading.parameter].label}</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>{parameterCatalog[reading.parameter].label}</Text>
+              <View style={styles.sourceBadge}>
+                <Text style={styles.sourceText}>{sourceLabels[reading.source]}</Text>
+              </View>
+            </View>
             <Text style={styles.time}>{formatWhen(reading.recordedAt)}{reading.note ? ` · ${reading.note}` : ''}</Text>
           </View>
           <Text style={styles.value}>{reading.value} <Text style={styles.unit}>{reading.unit}</Text></Text>
@@ -55,7 +68,10 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 17, padding: 14 },
   icon: { width: 42, height: 42, borderRadius: 13, backgroundColor: Brand.cyanSoft, alignItems: 'center', justifyContent: 'center' },
   details: { flex: 1 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
   label: { color: Brand.text, fontSize: 15, fontWeight: '800' },
+  sourceBadge: { backgroundColor: Brand.cyanSoft, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7 },
+  sourceText: { color: Brand.cyan, fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   time: { color: Brand.textMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
   value: { color: Brand.text, fontSize: 18, fontWeight: '900' },
   unit: { color: Brand.textMuted, fontSize: 11, fontWeight: '700' },

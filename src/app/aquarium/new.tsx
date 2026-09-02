@@ -6,13 +6,18 @@ import { FormScreen } from '@/components/app/form-screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { aquariumTypes, type AquariumType } from '@/domain/models';
+import { validateAquarium } from '@/domain/validation';
 import { useAppData } from '@/providers/app-data-provider';
 
 const typeLabels: Record<AquariumType, string> = {
   reef: 'Reef',
   saltwater: 'Saltwater',
   freshwater: 'Freshwater',
+  planted: 'Planted',
+  quarantine: 'Quarantine',
   pond: 'Pond',
+  aquaculture: 'Aquaculture',
+  custom: 'Custom',
 };
 
 export default function NewAquariumScreen() {
@@ -25,14 +30,16 @@ export default function NewAquariumScreen() {
   const [error, setError] = useState('');
 
   const parsedVolume = Number(volume);
-  const valid = name.trim().length >= 2 && Number.isFinite(parsedVolume) && parsedVolume > 0;
+  const draft = { name, type, volumeGallons: parsedVolume };
+  const validation = validateAquarium(draft);
+  const valid = volume.trim() !== '' && validation.valid;
 
   async function save() {
     if (!valid || saving) return;
     setSaving(true);
     setError('');
     try {
-      await addAquarium({ name, type, volumeGallons: parsedVolume });
+      await addAquarium(draft);
       router.back();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not create the aquarium.');
@@ -41,7 +48,7 @@ export default function NewAquariumScreen() {
   }
 
   return (
-    <FormScreen intro="Create a local aquarium profile. Additional details, livestock, and equipment can be added in later MVP milestones.">
+    <FormScreen intro="Create an aquarium profile that becomes the permanent identity for its history, measurements, and future integrations.">
       <Field
         autoCapitalize="words"
         autoFocus
