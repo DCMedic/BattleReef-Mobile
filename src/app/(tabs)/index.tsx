@@ -8,6 +8,7 @@ import { Brand } from '@/constants/theme';
 import { getDelta, getEffectiveTargetRange, getPreviousReading, getRangeStatusForTarget } from '@/domain/context';
 import { findMaterialChanges } from '@/domain/change-analysis';
 import { calculateStabilityScore } from '@/domain/stability';
+import { analyzeTrend } from '@/domain/trend-analysis';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
@@ -175,8 +176,13 @@ export default function HomeScreen() {
                   status === 'in_range' ? Brand.green :
                   status === 'unconfigured' ? Brand.textFaint :
                   Brand.amber;
+                const trend = analyzeTrend(key, readings, target);
                 return (
-                  <View key={key} style={styles.parameterCard}>
+                  <Pressable
+                    key={key}
+                    disabled={!trend}
+                    onPress={() => router.push({ pathname: '/analysis/trend', params: { parameter: key } })}
+                    style={styles.parameterCard}>
                     <View style={styles.parameterTopRow}>
                       <Text style={styles.parameterLabel}>{parameterCatalog[key].label}</Text>
                       <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
@@ -197,7 +203,19 @@ export default function HomeScreen() {
                     ) : (
                       <Text style={styles.target}>Custom target not set</Text>
                     )}
-                  </View>
+                    {trend ? (
+                      <View style={styles.trendInsight}>
+                        <Ionicons
+                          color={trend.direction === 'steady' ? Brand.green : Brand.cyan}
+                          name={trend.direction === 'rising' ? 'trending-up' : trend.direction === 'falling' ? 'trending-down' : 'remove'}
+                          size={14}
+                        />
+                        <Text style={styles.trendInsightText}>
+                          {trend.direction}{trend.persistence >= 2 ? ` · ${trend.persistence} consecutive out` : ''}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
                 );
               })}
             </View>
@@ -261,4 +279,6 @@ const styles = StyleSheet.create({
   parameterTime: { color: Brand.textFaint, fontSize: 11 },
   delta: { color: Brand.cyan, fontSize: 11, fontWeight: '800' },
   target: { color: Brand.textFaint, fontSize: 10, lineHeight: 14, marginTop: 6 },
+  trendInsight: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  trendInsightText: { color: Brand.cyan, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' },
 });
