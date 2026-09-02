@@ -38,6 +38,9 @@ npm run export:web
 - [Product requirements](docs/product-requirements.md)
 - [Architecture](docs/architecture.md)
 - [Delivery roadmap](docs/roadmap.md)
+- [Beta release checklist](docs/beta-release.md)
+- [Privacy and data practices](docs/privacy-data-practices.md)
+- [Store metadata draft](docs/store-metadata.md)
 
 ## Status
 
