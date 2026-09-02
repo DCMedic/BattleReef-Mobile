@@ -10,6 +10,8 @@ import type {
 } from '@/domain/models';
 
 export const BACKUP_SCHEMA_VERSION = 2;
+const MAX_BACKUP_MEDIA_FILE_BYTES = 100 * 1024 * 1024;
+const MAX_BACKUP_MEDIA_TOTAL_BYTES = 500 * 1024 * 1024;
 
 export type AquariumExportData = {
   aquarium: Aquarium;
@@ -100,11 +102,19 @@ function mimeTypeForStorageKey(storageKey: string) {
 
 export async function exportBackup(data: AquariumExportData) {
   const media: BackupMediaEntry[] = [];
+  let totalMediaBytes = 0;
 
   for (const photo of data.photos) {
     if (photo.mediaState !== 'managed' || !photo.storageKey) continue;
     try {
       const payload = await readManagedMediaBase64(photo.uri);
+      if (payload.byteLength > MAX_BACKUP_MEDIA_FILE_BYTES) {
+        throw new Error(`Photo "${photo.caption ?? photo.id}" exceeds the supported 100 MB backup limit.`);
+      }
+      if (totalMediaBytes + payload.byteLength > MAX_BACKUP_MEDIA_TOTAL_BYTES) {
+        throw new Error('Managed photo media exceeds the supported 500 MB backup limit.');
+      }
+      totalMediaBytes += payload.byteLength;
       media.push({
         photoId: photo.id,
         storageKey: photo.storageKey,
@@ -112,7 +122,8 @@ export async function exportBackup(data: AquariumExportData) {
         byteLength: payload.byteLength,
         base64: payload.base64,
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('backup limit')) throw error;
       // The photo record remains in the backup even if its managed file is no longer readable.
     }
   }
