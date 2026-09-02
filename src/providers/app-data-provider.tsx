@@ -31,7 +31,8 @@ import {
   recordEquipmentService as persistEquipmentService,
 } from '@/data/repository';
 import { cancelTaskReminder, nextRecurringDue, scheduleTaskReminder } from '@/services/task-reminders';
-import { restoreBackup, type BattleReefBackup } from '@/services/data-restore';
+import { restoreBackup } from '@/services/data-restore';
+import type { BattleReefBackup } from '@/services/data-export';
 import type {
   Aquarium,
   HusbandryEvent,
