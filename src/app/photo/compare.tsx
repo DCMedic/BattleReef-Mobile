@@ -5,6 +5,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/app/screen';
 import { EmptyState } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
+import { assessPhotoComparability } from '@/domain/photo-comparison';
 import type { PhotoRecord } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
@@ -94,6 +95,7 @@ export default function PhotoComparisonScreen() {
   const subjectLabel = sameSubject
     ? earlierLivestock?.name ?? 'Whole aquarium'
     : 'Different subjects';
+  const comparability = assessPhotoComparability(earlier, later);
 
   return (
     <Screen
@@ -105,6 +107,23 @@ export default function PhotoComparisonScreen() {
         <Text style={styles.summaryUnit}>{days === 1 ? 'day apart' : 'days apart'}</Text>
         <Text style={styles.subject}>{subjectLabel}</Text>
       </View>
+      <View style={[styles.comparability, comparability.level === 'weak' && styles.comparabilityWeak]}>
+        <View>
+          <Text style={styles.comparabilityLabel}>COMPARABILITY</Text>
+          <Text style={styles.comparabilityValue}>{comparability.level}</Text>
+        </View>
+        <Text style={styles.comparabilityScore}>{comparability.matched}/{comparability.total} matched conditions</Text>
+      </View>
+      {comparability.reasons.map((reason) => (
+        <View key={reason} style={styles.reasonRow}>
+          <Ionicons
+            color={reason.startsWith('Same') || reason.startsWith('Both') ? Brand.green : Brand.amber}
+            name={reason.startsWith('Same') || reason.startsWith('Both') ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+            size={16}
+          />
+          <Text style={styles.reasonText}>{reason}</Text>
+        </View>
+      ))}
       {!sameSubject ? <View style={styles.caution}><Ionicons color={Brand.amber} name="warning-outline" size={18} /><Text style={styles.cautionText}>These photos are linked to different subjects, so visual change may not represent true progress.</Text></View> : null}
       <View style={styles.compare}>
         <PhotoPanel label="BEFORE" photo={earlier} livestockName={earlierLivestock?.name} />
@@ -136,6 +155,13 @@ const styles = StyleSheet.create({
   summaryValue: { color: Brand.cyan, fontSize: 34, fontWeight: '900' },
   summaryUnit: { color: Brand.text, fontSize: 13, fontWeight: '800' },
   subject: { color: Brand.textMuted, fontSize: 12, marginTop: 4 },
+  comparability: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 13, borderRadius: 15, backgroundColor: Brand.cyanSoft, borderWidth: 1, borderColor: Brand.border },
+  comparabilityWeak: { backgroundColor: Brand.surface, borderColor: Brand.amber },
+  comparabilityLabel: { color: Brand.textFaint, fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  comparabilityValue: { color: Brand.text, fontSize: 18, fontWeight: '900', textTransform: 'capitalize', marginTop: 2 },
+  comparabilityScore: { color: Brand.textMuted, fontSize: 11, fontWeight: '800' },
+  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  reasonText: { color: Brand.textMuted, fontSize: 11, lineHeight: 16 },
   caution: { flexDirection: 'row', gap: 9, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: Brand.amber, backgroundColor: Brand.surface, alignItems: 'center' },
   cautionText: { color: Brand.amber, fontSize: 11, lineHeight: 16, flex: 1 },
   compare: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
