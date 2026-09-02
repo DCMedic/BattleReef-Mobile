@@ -162,10 +162,19 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   }, [bootstrap]);
 
   const selectAquarium = useCallback(async (aquariumId: string) => {
-    setSelectedAquariumId(aquariumId);
-    await saveSelectedAquariumId(db, aquariumId);
-    await loadDetails(aquariumId);
-  }, [db, loadDetails]);
+    const previousId = selectedAquariumId;
+    if (aquariumId === previousId) return;
+    if (!aquariums.some((item) => item.id === aquariumId)) throw new Error('Aquarium is no longer available.');
+
+    try {
+      await loadDetails(aquariumId);
+      await saveSelectedAquariumId(db, aquariumId);
+      setSelectedAquariumId(aquariumId);
+    } catch (caught) {
+      if (previousId) await loadDetails(previousId);
+      throw caught;
+    }
+  }, [aquariums, db, loadDetails, selectedAquariumId]);
 
   const addAquarium = useCallback(async (input: NewAquarium) => {
     const aquarium = await insertAquarium(db, input);
