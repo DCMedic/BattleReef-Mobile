@@ -24,17 +24,19 @@ type TimelineItem =
   | { kind: 'task-completed'; at: string; id: string; title: string }
   | { kind: 'husbandry'; at: string; id: string; event: ReturnType<typeof useAppData>['husbandryEvents'][number] }
   | { kind: 'livestock'; at: string; id: string; item: ReturnType<typeof useAppData>['livestock'][number] }
-  | { kind: 'equipment'; at: string; id: string; item: ReturnType<typeof useAppData>['equipment'][number] };
+  | { kind: 'equipment'; at: string; id: string; item: ReturnType<typeof useAppData>['equipment'][number] }
+  | { kind: 'inventory-event'; at: string; id: string; event: ReturnType<typeof useAppData>['inventoryEvents'][number] };
 
 export default function LogbookScreen() {
   const router = useRouter();
-  const { equipment, husbandryEvents, livestock, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
+  const { equipment, husbandryEvents, inventoryEvents, livestock, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
 
   const timeline: TimelineItem[] = [
     ...readings.map((reading) => ({ kind: 'reading' as const, at: reading.recordedAt, id: reading.id, reading })),
     ...husbandryEvents.map((event) => ({ kind: 'husbandry' as const, at: event.occurredAt, id: event.id, event })),
     ...livestock.map((item) => ({ kind: 'livestock' as const, at: item.acquiredAt ?? item.createdAt, id: item.id, item })),
     ...equipment.map((item) => ({ kind: 'equipment' as const, at: item.installedAt ?? item.createdAt, id: item.id, item })),
+    ...inventoryEvents.map((event) => ({ kind: 'inventory-event' as const, at: event.occurredAt, id: event.id, event })),
     ...tasks.map((task) => ({ kind: 'task-created' as const, at: task.createdAt, id: `${task.id}-created`, title: task.title })),
     ...tasks
       .filter((task) => task.completedAt)
@@ -114,6 +116,32 @@ export default function LogbookScreen() {
               <View style={styles.details}>
                 <Text style={styles.label}>{config.label}</Text>
                 <Text style={styles.time}>{formatWhen(event.occurredAt)}{details ? ` · ${details}` : ''}</Text>
+              </View>
+            </View>
+          );
+        }
+
+        if (item.kind === 'inventory-event') {
+          const event = item.event;
+          const entity = event.entityType === 'livestock'
+            ? livestock.find((entry) => entry.id === event.entityId)
+            : equipment.find((entry) => entry.id === event.entityId);
+          const title = event.kind === 'service'
+            ? 'Equipment serviced'
+            : event.kind === 'status_change'
+              ? `${event.entityType === 'livestock' ? 'Livestock' : 'Equipment'} status changed`
+              : 'Inventory note';
+          const detail = event.kind === 'status_change'
+            ? `${entity?.name ?? 'Inventory item'} · ${event.fromStatus ?? 'unknown'} → ${event.toStatus ?? 'unknown'}`
+            : `${entity?.name ?? 'Inventory item'}${event.note ? ` · ${event.note}` : ''}`;
+          return (
+            <View key={item.id} style={styles.row}>
+              <View style={styles.icon}>
+                <Ionicons color={Brand.cyan} name={event.kind === 'service' ? 'construct-outline' : 'swap-horizontal-outline'} size={20} />
+              </View>
+              <View style={styles.details}>
+                <Text style={styles.label}>{title}</Text>
+                <Text style={styles.time}>{formatWhen(item.at)} · {detail}</Text>
               </View>
             </View>
           );

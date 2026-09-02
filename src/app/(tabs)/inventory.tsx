@@ -26,26 +26,26 @@ export default function InventoryScreen() {
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Livestock</Text><Text style={styles.count}>{livestock.length}</Text></View>
           {livestock.length === 0 ? <EmptyState body="Track fish, coral, invertebrates, plants, and other inhabitants." icon="fish-outline" title="No livestock yet" /> :
             livestock.map((item) => (
-              <View key={item.id} style={styles.row}>
+              <Pressable key={item.id} onPress={() => router.push({ pathname: '/livestock/[id]', params: { id: item.id } })} style={styles.row}>
                 <View style={styles.icon}><Ionicons color={Brand.cyan} name="fish-outline" size={21} /></View>
                 <View style={styles.body}>
                   <Text style={styles.title}>{item.name}{item.quantity > 1 ? ` ×${item.quantity}` : ''}</Text>
                   <Text style={styles.meta}>{item.species || item.kind} · {item.status}{item.acquiredAt ? ` · acquired ${formatWhen(item.acquiredAt)}` : ''}</Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Equipment</Text><Text style={styles.count}>{equipment.length}</Text></View>
           {equipment.length === 0 ? <EmptyState body="Track pumps, lights, heaters, filtration, monitors, and other equipment." icon="hardware-chip-outline" title="No equipment yet" /> :
             equipment.map((item) => (
-              <View key={item.id} style={styles.row}>
+              <Pressable key={item.id} onPress={() => router.push({ pathname: '/equipment/[id]', params: { id: item.id } })} style={styles.row}>
                 <View style={styles.icon}><Ionicons color={Brand.cyan} name="hardware-chip-outline" size={21} /></View>
                 <View style={styles.body}>
                   <Text style={styles.title}>{item.name}</Text>
                   <Text style={styles.meta}>{[item.manufacturer, item.model, item.kind, item.status].filter(Boolean).join(' · ')}</Text>
                   {item.warrantyEndsAt ? <Text style={styles.warranty}>Warranty ends {formatWhen(item.warrantyEndsAt)}</Text> : null}
                 </View>
-              </View>
+              </Pressable>
             ))}
         </>
       )}
