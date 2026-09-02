@@ -22,15 +22,19 @@ type TimelineItem =
   | { kind: 'reading'; at: string; id: string; reading: ReturnType<typeof useAppData>['readings'][number] }
   | { kind: 'task-created'; at: string; id: string; title: string }
   | { kind: 'task-completed'; at: string; id: string; title: string }
-  | { kind: 'husbandry'; at: string; id: string; event: ReturnType<typeof useAppData>['husbandryEvents'][number] };
+  | { kind: 'husbandry'; at: string; id: string; event: ReturnType<typeof useAppData>['husbandryEvents'][number] }
+  | { kind: 'livestock'; at: string; id: string; item: ReturnType<typeof useAppData>['livestock'][number] }
+  | { kind: 'equipment'; at: string; id: string; item: ReturnType<typeof useAppData>['equipment'][number] };
 
 export default function LogbookScreen() {
   const router = useRouter();
-  const { husbandryEvents, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
+  const { equipment, husbandryEvents, livestock, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
 
   const timeline: TimelineItem[] = [
     ...readings.map((reading) => ({ kind: 'reading' as const, at: reading.recordedAt, id: reading.id, reading })),
     ...husbandryEvents.map((event) => ({ kind: 'husbandry' as const, at: event.occurredAt, id: event.id, event })),
+    ...livestock.map((item) => ({ kind: 'livestock' as const, at: item.acquiredAt ?? item.createdAt, id: item.id, item })),
+    ...equipment.map((item) => ({ kind: 'equipment' as const, at: item.installedAt ?? item.createdAt, id: item.id, item })),
     ...tasks.map((task) => ({ kind: 'task-created' as const, at: task.createdAt, id: `${task.id}-created`, title: task.title })),
     ...tasks
       .filter((task) => task.completedAt)
@@ -110,6 +114,21 @@ export default function LogbookScreen() {
               <View style={styles.details}>
                 <Text style={styles.label}>{config.label}</Text>
                 <Text style={styles.time}>{formatWhen(event.occurredAt)}{details ? ` · ${details}` : ''}</Text>
+              </View>
+            </View>
+          );
+        }
+
+        if (item.kind === 'livestock' || item.kind === 'equipment') {
+          const livestockItem = item.kind === 'livestock';
+          return (
+            <View key={item.id} style={styles.row}>
+              <View style={styles.icon}>
+                <Ionicons color={Brand.cyan} name={livestockItem ? 'fish-outline' : 'hardware-chip-outline'} size={20} />
+              </View>
+              <View style={styles.details}>
+                <Text style={styles.label}>{livestockItem ? 'Livestock added' : 'Equipment installed'}</Text>
+                <Text style={styles.time}>{formatWhen(item.at)} · {item.item.name}</Text>
               </View>
             </View>
           );
