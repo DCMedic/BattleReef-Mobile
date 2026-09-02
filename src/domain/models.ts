@@ -128,3 +128,20 @@ export type Equipment = {
   createdAt: string;
 };
 export type NewEquipment = Pick<Equipment, 'name' | 'manufacturer' | 'model' | 'kind' | 'status' | 'installedAt' | 'warrantyEndsAt' | 'note'>;
+
+
+export const inventoryEventKinds = ['status_change', 'service', 'note'] as const;
+export type InventoryEventKind = (typeof inventoryEventKinds)[number];
+
+export type InventoryEvent = {
+  id: string;
+  aquariumId: string;
+  entityType: 'livestock' | 'equipment';
+  entityId: string;
+  kind: InventoryEventKind;
+  fromStatus: string | null;
+  toStatus: string | null;
+  note: string | null;
+  occurredAt: string;
+  createdAt: string;
+};
