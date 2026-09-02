@@ -57,6 +57,7 @@ import type {
 
 type AppDataValue = {
   loading: boolean;
+  dataError: string | null;
   aquariums: Aquarium[];
   selectedAquarium: Aquarium | null;
   readings: ParameterReading[];
@@ -90,6 +91,7 @@ const AppDataContext = createContext<AppDataValue | null>(null);
 export function AppDataProvider({ children }: PropsWithChildren) {
   const db = useSQLiteContext();
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [aquariums, setAquariums] = useState<Aquarium[]>([]);
   const [selectedAquariumId, setSelectedAquariumId] = useState<string | null>(null);
   const [readings, setReadings] = useState<ParameterReading[]>([]);
@@ -134,13 +136,19 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   }, [db]);
 
   const bootstrap = useCallback(async () => {
-    const nextAquariums = await listAquariums(db);
-    const savedId = await getSelectedAquariumId(db);
-    const nextId = nextAquariums.some((item) => item.id === savedId) ? savedId : (nextAquariums[0]?.id ?? null);
-    setAquariums(nextAquariums);
-    setSelectedAquariumId(nextId);
-    await loadDetails(nextId);
-    setLoading(false);
+    setDataError(null);
+    try {
+      const nextAquariums = await listAquariums(db);
+      const savedId = await getSelectedAquariumId(db);
+      const nextId = nextAquariums.some((item) => item.id === savedId) ? savedId : (nextAquariums[0]?.id ?? null);
+      setAquariums(nextAquariums);
+      setSelectedAquariumId(nextId);
+      await loadDetails(nextId);
+    } catch (caught) {
+      setDataError(caught instanceof Error ? caught.message : 'BattleReef could not load local aquarium data.');
+    } finally {
+      setLoading(false);
+    }
   }, [db, loadDetails]);
 
   useEffect(() => {
@@ -276,10 +284,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<AppDataValue>(() => ({
-    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
+    loading, dataError, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
     selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
   }), [
-    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
+    loading, dataError, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
     selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
   ]);
 
