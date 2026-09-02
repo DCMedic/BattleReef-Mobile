@@ -4,6 +4,7 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 import {
   createAquarium as insertAquarium,
   createHusbandryEvent as insertHusbandryEvent,
+  createPhotoRecord as insertPhotoRecord,
   createLivestock as insertLivestock,
   createEquipment as insertEquipment,
   createReading as insertReading,
@@ -12,6 +13,7 @@ import {
   getSelectedAquariumId,
   listAquariums,
   listHusbandryEvents,
+  listPhotos,
   listLivestock,
   listEquipment,
   listInventoryEvents,
@@ -42,6 +44,8 @@ import type {
   NewTask,
   ParameterKey,
   ParameterReading,
+  PhotoRecord,
+  NewPhotoRecord,
   TargetOverride,
 } from '@/domain/models';
 
@@ -56,6 +60,7 @@ type AppDataValue = {
   equipment: Equipment[];
   inventoryEvents: InventoryEvent[];
   targetOverrides: TargetOverride[];
+  photos: PhotoRecord[];
   selectAquarium: (aquariumId: string) => Promise<void>;
   addAquarium: (input: NewAquarium) => Promise<void>;
   addReading: (input: NewReading) => Promise<void>;
@@ -66,6 +71,7 @@ type AppDataValue = {
   setLivestockStatus: (item: Livestock, status: LivestockStatus, note?: string) => Promise<void>;
   setEquipmentStatus: (item: Equipment, status: EquipmentStatus, note?: string) => Promise<void>;
   addEquipmentService: (item: Equipment, note: string) => Promise<void>;
+  addPhoto: (input: NewPhotoRecord) => Promise<void>;
   toggleTask: (task: MaintenanceTask) => Promise<void>;
   saveTargetOverride: (parameter: ParameterKey, min: number, max: number) => Promise<void>;
   resetTargetOverride: (parameter: ParameterKey) => Promise<void>;
@@ -85,6 +91,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [inventoryEvents, setInventoryEvents] = useState<InventoryEvent[]>([]);
   const [targetOverrides, setTargetOverrides] = useState<TargetOverride[]>([]);
+  const [photos, setPhotos] = useState<PhotoRecord[]>([]);
 
   const loadDetails = useCallback(async (aquariumId: string | null) => {
     if (!aquariumId) {
@@ -95,9 +102,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       setEquipment([]);
       setInventoryEvents([]);
       setTargetOverrides([]);
+      setPhotos([]);
       return;
     }
-    const [nextReadings, nextTasks, nextEvents, nextOverrides, nextLivestock, nextEquipment, nextInventoryEvents] = await Promise.all([
+    const [nextReadings, nextTasks, nextEvents, nextOverrides, nextLivestock, nextEquipment, nextInventoryEvents, nextPhotos] = await Promise.all([
       listReadings(db, aquariumId),
       listTasks(db, aquariumId),
       listHusbandryEvents(db, aquariumId),
@@ -105,6 +113,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       listLivestock(db, aquariumId),
       listEquipment(db, aquariumId),
       listInventoryEvents(db, aquariumId),
+      listPhotos(db, aquariumId),
     ]);
     setReadings(nextReadings);
     setTasks(nextTasks);
@@ -113,6 +122,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     setLivestock(nextLivestock);
     setEquipment(nextEquipment);
     setInventoryEvents(nextInventoryEvents);
+    setPhotos(nextPhotos);
   }, [db]);
 
   const bootstrap = useCallback(async () => {
@@ -193,6 +203,12 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     if (selectedAquariumId) setInventoryEvents(await listInventoryEvents(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
+  const addPhoto = useCallback(async (input: NewPhotoRecord) => {
+    if (!selectedAquariumId) throw new Error('Create an aquarium before adding photos.');
+    await insertPhotoRecord(db, selectedAquariumId, input);
+    setPhotos(await listPhotos(db, selectedAquariumId));
+  }, [db, selectedAquariumId]);
+
   const toggleTask = useCallback(async (task: MaintenanceTask) => {
     await updateTask(db, task);
     if (selectedAquariumId) setTasks(await listTasks(db, selectedAquariumId));
@@ -216,8 +232,8 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<AppDataValue>(() => ({
-    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, toggleTask, saveTargetOverride, resetTargetOverride,
+    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, toggleTask, saveTargetOverride, resetTargetOverride,
   }), [
     loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides,
     selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, toggleTask, saveTargetOverride, resetTargetOverride,

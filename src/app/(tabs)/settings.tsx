@@ -43,6 +43,14 @@ export default function SettingsScreen() {
         </Pressable>
       ) : null}
 
+      {selectedAquarium ? (
+        <Pressable onPress={() => router.push('/photos')} style={styles.menuRow}>
+          <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="images-outline" size={21} /></View>
+          <View style={styles.menuText}><Text style={styles.menuTitle}>Photo timeline</Text><Text style={styles.menuBody}>Visual history for {selectedAquarium.name}</Text></View>
+          <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
+        </Pressable>
+      ) : null}
+
       <Text style={styles.sectionTitle}>Architecture guardrails</Text>
       {roadmap.map((item) => (
         <View key={item.title} style={styles.menuRow}>

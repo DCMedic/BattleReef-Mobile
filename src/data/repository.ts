@@ -23,6 +23,8 @@ import {
   parameterCatalog,
   type ParameterKey,
   type ParameterReading,
+  type PhotoRecord,
+  type NewPhotoRecord,
   type ReadingSource,
   type TargetOverride,
 } from '@/domain/models';
@@ -36,6 +38,7 @@ type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at
 type LivestockRow = { id: string; aquarium_id: string; name: string; species: string | null; kind: string; quantity: number; status: string; acquired_at: string | null; note: string | null; created_at: string };
 type EquipmentRow = { id: string; aquarium_id: string; name: string; manufacturer: string | null; model: string | null; kind: string; status: string; installed_at: string | null; warranty_ends_at: string | null; note: string | null; created_at: string };
 type InventoryEventRow = { id: string; aquarium_id: string; entity_type: string; entity_id: string; kind: string; from_status: string | null; to_status: string | null; note: string | null; occurred_at: string; created_at: string };
+type PhotoRow = { id: string; aquarium_id: string; uri: string; caption: string | null; linked_livestock_id: string | null; captured_at: string; created_at: string };
 
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -398,4 +401,52 @@ export async function recordEquipmentService(db: SQLiteDatabase, item: Equipment
   const clean = note.trim();
   if (clean.length < 2 || clean.length > 240) throw new Error('Service note must contain between 2 and 240 characters.');
   await recordInventoryEvent(db, item.aquariumId, 'equipment', item.id, 'service', item.status, item.status, clean);
+}
+
+
+function mapPhoto(row: PhotoRow): PhotoRecord {
+  return {
+    id: row.id,
+    aquariumId: row.aquarium_id,
+    uri: row.uri,
+    caption: row.caption,
+    linkedLivestockId: row.linked_livestock_id,
+    capturedAt: row.captured_at,
+    createdAt: row.created_at,
+  };
+}
+
+export async function listPhotos(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<PhotoRow>(
+    'SELECT * FROM photo_records WHERE aquarium_id = ? ORDER BY captured_at DESC LIMIT 250',
+    aquariumId,
+  );
+  return rows.map(mapPhoto);
+}
+
+export async function createPhotoRecord(db: SQLiteDatabase, aquariumId: string, input: NewPhotoRecord) {
+  const uri = input.uri.trim();
+  if (!uri) throw new Error('Photo URI is required.');
+  const caption = input.caption?.trim() || null;
+  if ((caption?.length ?? 0) > 240) throw new Error('Photo caption cannot exceed 240 characters.');
+  const capturedAt = input.capturedAt ?? new Date().toISOString();
+  if (Number.isNaN(Date.parse(capturedAt))) throw new Error('Photo capture time is invalid.');
+
+  const photo: PhotoRecord = {
+    id: createId('photo'),
+    aquariumId,
+    uri,
+    caption,
+    linkedLivestockId: input.linkedLivestockId ?? null,
+    capturedAt,
+    createdAt: new Date().toISOString(),
+  };
+
+  await db.runAsync(
+    `INSERT INTO photo_records
+      (id, aquarium_id, uri, caption, linked_livestock_id, captured_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    photo.id, photo.aquariumId, photo.uri, photo.caption, photo.linkedLivestockId, photo.capturedAt, photo.createdAt,
+  );
+  return photo;
 }

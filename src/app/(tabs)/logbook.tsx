@@ -25,11 +25,12 @@ type TimelineItem =
   | { kind: 'husbandry'; at: string; id: string; event: ReturnType<typeof useAppData>['husbandryEvents'][number] }
   | { kind: 'livestock'; at: string; id: string; item: ReturnType<typeof useAppData>['livestock'][number] }
   | { kind: 'equipment'; at: string; id: string; item: ReturnType<typeof useAppData>['equipment'][number] }
-  | { kind: 'inventory-event'; at: string; id: string; event: ReturnType<typeof useAppData>['inventoryEvents'][number] };
+  | { kind: 'inventory-event'; at: string; id: string; event: ReturnType<typeof useAppData>['inventoryEvents'][number] }
+  | { kind: 'photo'; at: string; id: string; photo: ReturnType<typeof useAppData>['photos'][number] };
 
 export default function LogbookScreen() {
   const router = useRouter();
-  const { equipment, husbandryEvents, inventoryEvents, livestock, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
+  const { equipment, husbandryEvents, inventoryEvents, livestock, loading, photos, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
 
   const timeline: TimelineItem[] = [
     ...readings.map((reading) => ({ kind: 'reading' as const, at: reading.recordedAt, id: reading.id, reading })),
@@ -37,6 +38,7 @@ export default function LogbookScreen() {
     ...livestock.map((item) => ({ kind: 'livestock' as const, at: item.acquiredAt ?? item.createdAt, id: item.id, item })),
     ...equipment.map((item) => ({ kind: 'equipment' as const, at: item.installedAt ?? item.createdAt, id: item.id, item })),
     ...inventoryEvents.map((event) => ({ kind: 'inventory-event' as const, at: event.occurredAt, id: event.id, event })),
+    ...photos.map((photo) => ({ kind: 'photo' as const, at: photo.capturedAt, id: photo.id, photo })),
     ...tasks.map((task) => ({ kind: 'task-created' as const, at: task.createdAt, id: `${task.id}-created`, title: task.title })),
     ...tasks
       .filter((task) => task.completedAt)
@@ -116,6 +118,21 @@ export default function LogbookScreen() {
               <View style={styles.details}>
                 <Text style={styles.label}>{config.label}</Text>
                 <Text style={styles.time}>{formatWhen(event.occurredAt)}{details ? ` · ${details}` : ''}</Text>
+              </View>
+            </View>
+          );
+        }
+
+        if (item.kind === 'photo') {
+          const linked = livestock.find((entry) => entry.id === item.photo.linkedLivestockId);
+          return (
+            <View key={item.id} style={styles.row}>
+              <View style={styles.icon}>
+                <Ionicons color={Brand.cyan} name="image-outline" size={20} />
+              </View>
+              <View style={styles.details}>
+                <Text style={styles.label}>Photo added</Text>
+                <Text style={styles.time}>{formatWhen(item.at)}{linked ? ` · ${linked.name}` : ''}{item.photo.caption ? ` · ${item.photo.caption}` : ''}</Text>
               </View>
             </View>
           );
