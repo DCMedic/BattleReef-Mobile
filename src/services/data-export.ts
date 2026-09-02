@@ -10,8 +10,8 @@ import type {
 } from '@/domain/models';
 
 export const BACKUP_SCHEMA_VERSION = 2;
-const MAX_BACKUP_MEDIA_FILE_BYTES = 100 * 1024 * 1024;
-const MAX_BACKUP_MEDIA_TOTAL_BYTES = 500 * 1024 * 1024;
+export const MAX_BACKUP_MEDIA_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_BACKUP_MEDIA_TOTAL_BYTES = 100 * 1024 * 1024;
 
 export type AquariumExportData = {
   aquarium: Aquarium;
@@ -76,8 +76,12 @@ async function writeAndShare(filename: string, content: string, mimeType: string
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, content, { encoding: FileSystem.EncodingType.UTF8 });
 
-  if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
-  await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Export BattleReef data', UTI: mimeType === 'application/json' ? 'public.json' : 'public.comma-separated-values-text' });
+  try {
+    if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
+    await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Export BattleReef data', UTI: mimeType === 'application/json' ? 'public.json' : 'public.comma-separated-values-text' });
+  } finally {
+    await FileSystem.deleteAsync(uri, { idempotent: true });
+  }
 }
 
 export function createBackup(data: AquariumExportData, media: BackupMediaEntry[] = []): BattleReefBackup {
@@ -109,10 +113,10 @@ export async function exportBackup(data: AquariumExportData) {
     try {
       const payload = await readManagedMediaBase64(photo.uri);
       if (payload.byteLength > MAX_BACKUP_MEDIA_FILE_BYTES) {
-        throw new Error(`Photo "${photo.caption ?? photo.id}" exceeds the supported 100 MB backup limit.`);
+        throw new Error(`Photo "${photo.caption ?? photo.id}" exceeds the supported 20 MB backup limit.`);
       }
       if (totalMediaBytes + payload.byteLength > MAX_BACKUP_MEDIA_TOTAL_BYTES) {
-        throw new Error('Managed photo media exceeds the supported 500 MB backup limit.');
+        throw new Error('Managed photo media exceeds the supported 100 MB backup limit.');
       }
       totalMediaBytes += payload.byteLength;
       media.push({
