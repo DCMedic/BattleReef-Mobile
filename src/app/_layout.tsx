@@ -1,9 +1,30 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 
 import { migrateDatabase } from '@/data/database';
 import { AppDataProvider } from '@/providers/app-data-provider';
+
+function NotificationNavigation() {
+  const router = useRouter();
+
+  useEffect(() => {
+    function handleResponse(response: Notifications.NotificationResponse | null) {
+      if (response?.notification.request.content.data?.route === '/tasks') {
+        router.push('/tasks');
+      }
+    }
+
+    void Notifications.getLastNotificationResponseAsync().then(handleResponse);
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleResponse);
+
+    return () => subscription.remove();
+  }, [router]);
+
+  return null;
+}
 
 const battleReefTheme = {
   ...DarkTheme,
@@ -16,6 +37,7 @@ export default function RootLayout() {
       <AppDataProvider>
         <ThemeProvider value={battleReefTheme}>
           <StatusBar style="light" />
+          <NotificationNavigation />
           <Stack screenOptions={{ contentStyle: { backgroundColor: '#061522' }, headerStyle: { backgroundColor: '#0B2234' }, headerTintColor: '#F3FAFD', headerShadowVisible: false }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="aquarium/new" options={{ title: 'Add aquarium', presentation: 'modal' }} />
