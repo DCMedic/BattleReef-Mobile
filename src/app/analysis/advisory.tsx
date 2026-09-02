@@ -71,7 +71,7 @@ export default function AdvisoryScreen() {
 
           <Card>
             <Text style={styles.note}>
-              BattleReef advisories are conservative decision support. Confirm unusual measurements and consider the aquarium's full context before changing husbandry.
+              BattleReef advisories are conservative decision support. Confirm unusual measurements and consider the aquarium&apos;s full context before changing husbandry.
             </Text>
           </Card>
         </>
