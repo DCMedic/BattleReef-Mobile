@@ -67,6 +67,9 @@ export function parseAndValidateBackup(raw: string): BattleReefBackup {
 
   if (value.schemaVersion >= 2) {
     const media = requireArray(value.media, 'media');
+    const mediaPhotoIds = new Set<string>();
+    let totalMediaBytes = 0;
+
     for (const entry of media) {
       if (!isRecord(entry)) throw new Error('Backup media entry is invalid.');
       if (!isString(entry.photoId) || !isString(entry.storageKey) || !isString(entry.mimeType) || !isString(entry.base64)) {
@@ -78,6 +81,14 @@ export function parseAndValidateBackup(raw: string): BattleReefBackup {
       if (!entry.base64 || !/^[A-Za-z0-9+/=\r\n]+$/.test(entry.base64)) {
         throw new Error('Backup contains an invalid media payload.');
       }
+      if (mediaPhotoIds.has(entry.photoId)) throw new Error('Backup contains duplicate media for one photo.');
+      mediaPhotoIds.add(entry.photoId);
+
+      const estimatedBytes = Math.floor((entry.base64.replace(/[\r\n]/g, '').length * 3) / 4);
+      if (Math.abs(estimatedBytes - entry.byteLength) > 2) throw new Error('Backup media size verification failed.');
+      if (entry.byteLength > 100 * 1024 * 1024) throw new Error('A backup photo exceeds the supported 100 MB limit.');
+      totalMediaBytes += entry.byteLength;
+      if (totalMediaBytes > 500 * 1024 * 1024) throw new Error('Backup media exceeds the supported 500 MB total limit.');
     }
   }
 
