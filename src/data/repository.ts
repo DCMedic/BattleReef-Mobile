@@ -82,8 +82,6 @@ function mapHusbandryEvent(row: HusbandryRow): HusbandryEvent {
     subject: row.subject,
     note: row.note,
     createdAt: row.created_at,
-    storageKey: row.storage_key,
-    mediaState: row.media_state as PhotoRecord['mediaState'],
   };
 }
 
@@ -415,6 +413,8 @@ function mapPhoto(row: PhotoRow): PhotoRecord {
     linkedLivestockId: row.linked_livestock_id,
     capturedAt: row.captured_at,
     createdAt: row.created_at,
+    storageKey: row.storage_key,
+    mediaState: row.media_state as PhotoRecord['mediaState'],
   };
 }
 
