@@ -1,5 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+
+import { readManagedMediaBase64 } from '@/services/media-storage';
 import { Platform } from 'react-native';
 
 import type {
@@ -7,7 +9,7 @@ import type {
   MaintenanceTask, ParameterReading, PhotoRecord, TargetOverride,
 } from '@/domain/models';
 
-export const BACKUP_SCHEMA_VERSION = 1;
+export const BACKUP_SCHEMA_VERSION = 2;
 
 export type AquariumExportData = {
   aquarium: Aquarium;
@@ -21,6 +23,14 @@ export type AquariumExportData = {
   photos: PhotoRecord[];
 };
 
+export type BackupMediaEntry = {
+  photoId: string;
+  storageKey: string;
+  mimeType: string;
+  byteLength: number;
+  base64: string;
+};
+
 export type BattleReefBackup = {
   format: 'battlereef-backup';
   schemaVersion: number;
@@ -28,6 +38,7 @@ export type BattleReefBackup = {
   app: 'BattleReef Mobile';
   scope: 'aquarium';
   data: AquariumExportData;
+  media?: BackupMediaEntry[];
 };
 
 function safeName(value: string) {
@@ -67,7 +78,7 @@ async function writeAndShare(filename: string, content: string, mimeType: string
   await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Export BattleReef data', UTI: mimeType === 'application/json' ? 'public.json' : 'public.comma-separated-values-text' });
 }
 
-export function createBackup(data: AquariumExportData): BattleReefBackup {
+export function createBackup(data: AquariumExportData, media: BackupMediaEntry[] = []): BattleReefBackup {
   return {
     format: 'battlereef-backup',
     schemaVersion: BACKUP_SCHEMA_VERSION,
@@ -75,13 +86,40 @@ export function createBackup(data: AquariumExportData): BattleReefBackup {
     app: 'BattleReef Mobile',
     scope: 'aquarium',
     data,
+    media,
   };
 }
 
+function mimeTypeForStorageKey(storageKey: string) {
+  const extension = storageKey.split('.').pop()?.toLowerCase();
+  if (extension === 'png') return 'image/png';
+  if (extension === 'webp') return 'image/webp';
+  if (extension === 'heic' || extension === 'heif') return 'image/heic';
+  return 'image/jpeg';
+}
+
 export async function exportBackup(data: AquariumExportData) {
-  const backup = createBackup(data);
+  const media: BackupMediaEntry[] = [];
+
+  for (const photo of data.photos) {
+    if (photo.mediaState !== 'managed' || !photo.storageKey) continue;
+    try {
+      const payload = await readManagedMediaBase64(photo.uri);
+      media.push({
+        photoId: photo.id,
+        storageKey: photo.storageKey,
+        mimeType: mimeTypeForStorageKey(photo.storageKey),
+        byteLength: payload.byteLength,
+        base64: payload.base64,
+      });
+    } catch {
+      // The photo record remains in the backup even if its managed file is no longer readable.
+    }
+  }
+
+  const backup = createBackup(data, media);
   const filename = `battlereef-${safeName(data.aquarium.name)}-${new Date().toISOString().slice(0, 10)}.br.json`;
-  await writeAndShare(filename, JSON.stringify(backup, null, 2), 'application/json');
+  await writeAndShare(filename, JSON.stringify(backup), 'application/json');
 }
 
 export async function exportReadingsCsv(data: AquariumExportData) {
