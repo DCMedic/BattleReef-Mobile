@@ -5,20 +5,22 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/app/screen';
 import { Card, EmptyState, IconButton, LoadingState, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
-import { getDelta, getPreviousReading, getRangeStatus, getTargetRange } from '@/domain/context';
+import { getDelta, getEffectiveTargetRange, getPreviousReading, getRangeStatusForTarget } from '@/domain/context';
+import { calculateStabilityScore } from '@/domain/stability';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { aquariums, loading, readings, selectedAquarium, selectAquarium, tasks } = useAppData();
+  const { aquariums, loading, readings, selectedAquarium, selectAquarium, targetOverrides, tasks } = useAppData();
 
   const latest = readings.reduce<Partial<Record<ParameterKey, (typeof readings)[number]>>>((result, reading) => {
     if (!result[reading.parameter]) result[reading.parameter] = reading;
     return result;
   }, {});
   const openTasks = tasks.filter((task) => !task.completedAt).length;
+  const stability = selectedAquarium ? calculateStabilityScore(selectedAquarium, readings, targetOverrides) : null;
 
   return (
     <Screen
@@ -89,6 +91,25 @@ export default function HomeScreen() {
             </View>
           </Card>
 
+          {stability ? (
+            <Card>
+              <View style={styles.stabilityRow}>
+                <View>
+                  <Text style={styles.sectionLabel}>STABILITY SCORE</Text>
+                  <View style={styles.scoreLine}>
+                    <Text style={styles.scoreValue}>{stability.score ?? '—'}</Text>
+                    <Text style={styles.scoreSuffix}>{stability.score === null ? '' : '/100'}</Text>
+                  </View>
+                  <Text style={styles.scoreLabel}>{stability.label}</Text>
+                </View>
+                <View style={styles.scoreDetails}>
+                  <Text style={styles.scoreExplanation}>{stability.explanation}</Text>
+                  <Pressable onPress={() => router.push('/targets')}><Text style={styles.link}>Adjust targets</Text></Pressable>
+                </View>
+              </View>
+            </Card>
+          ) : null}
+
           <View style={styles.actionGrid}>
             <Pressable onPress={() => router.push('/reading/new')} style={styles.quickAction}>
               <View style={styles.actionIcon}><Ionicons color={Brand.cyan} name="water" size={22} /></View>
@@ -119,8 +140,8 @@ export default function HomeScreen() {
                 const reading = latest[key]!;
                 const previous = getPreviousReading(readings, reading);
                 const delta = getDelta(reading, previous);
-                const status = getRangeStatus(selectedAquarium.type, reading);
-                const target = getTargetRange(selectedAquarium.type, key);
+                const target = getEffectiveTargetRange(selectedAquarium.id, selectedAquarium.type, key, targetOverrides);
+                const status = getRangeStatusForTarget(reading, target);
                 const statusColor =
                   status === 'in_range' ? Brand.green :
                   status === 'unconfigured' ? Brand.textFaint :
@@ -178,6 +199,13 @@ const styles = StyleSheet.create({
   summaryValue: { color: Brand.text, fontSize: 24, fontWeight: '900' },
   summaryLabel: { color: Brand.textMuted, fontSize: 11, marginTop: 2 },
   divider: { height: 36, width: 1, backgroundColor: Brand.border },
+  stabilityRow: { flexDirection: 'row', gap: 18, alignItems: 'center' },
+  scoreLine: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
+  scoreValue: { color: Brand.text, fontSize: 36, fontWeight: '900' },
+  scoreSuffix: { color: Brand.textMuted, fontSize: 13, fontWeight: '700', marginLeft: 3 },
+  scoreLabel: { color: Brand.cyan, fontSize: 12, fontWeight: '800', marginTop: 2 },
+  scoreDetails: { flex: 1, gap: 8 },
+  scoreExplanation: { color: Brand.textMuted, fontSize: 12, lineHeight: 18 },
   actionGrid: { flexDirection: 'row', gap: 12 },
   quickAction: { flex: 1, minHeight: 142, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 18, padding: 16 },
   actionIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: Brand.cyanSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },

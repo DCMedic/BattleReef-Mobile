@@ -16,30 +16,32 @@ const roadmap = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { aquariums } = useAppData();
+  const { aquariums, selectedAquarium } = useAppData();
 
   return (
     <Screen subtitle="Account, aquariums, and product information" title="More">
       <Card>
-        <View style={styles.brandRow}>
-          <Image source={require('@/assets/brand/battlereef-logo-full.webp')} style={styles.wordmark} />
-        </View>
+        <View style={styles.brandRow}><Image source={require('@/assets/brand/battlereef-logo-full.webp')} style={styles.wordmark} /></View>
         <View style={styles.planRow}>
           <View><Text style={styles.planLabel}>CURRENT PLAN</Text><Text style={styles.planName}>Basic</Text></View>
-          <View style={styles.badge}><Text style={styles.badgeText}>MVP</Text></View>
+          <View style={styles.badge}><Text style={styles.badgeText}>ALPHA</Text></View>
         </View>
-        <Text style={styles.planBody}>Core aquarium records, water-test logging, and maintenance tools. No external-device control.</Text>
+        <Text style={styles.planBody}>Core aquarium records, water-test logging, maintenance, target ranges, and transparent stability insights. No external-device control.</Text>
       </Card>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Aquariums</Text>
-        <Text style={styles.count}>{aquariums.length}</Text>
-      </View>
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Aquariums</Text><Text style={styles.count}>{aquariums.length}</Text></View>
       <Pressable onPress={() => router.push('/aquarium/new')} style={styles.menuRow}>
         <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="add" size={21} /></View>
         <View style={styles.menuText}><Text style={styles.menuTitle}>Add aquarium</Text><Text style={styles.menuBody}>Create another independent record</Text></View>
         <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
       </Pressable>
+      {selectedAquarium ? (
+        <Pressable onPress={() => router.push('/targets')} style={styles.menuRow}>
+          <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="options-outline" size={21} /></View>
+          <View style={styles.menuText}><Text style={styles.menuTitle}>Parameter targets</Text><Text style={styles.menuBody}>Customize target ranges for {selectedAquarium.name}</Text></View>
+          <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
+        </Pressable>
+      ) : null}
 
       <Text style={styles.sectionTitle}>Architecture guardrails</Text>
       {roadmap.map((item) => (
@@ -49,7 +51,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Foundation 0.1.0</Text>
+      <Text style={styles.version}>BattleReef Mobile · Alpha 0.3</Text>
     </Screen>
   );
 }
