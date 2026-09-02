@@ -45,6 +45,13 @@
           "cameraPermission": "Allow BattleReef to use your camera for aquarium photos.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "battlereef-reminders",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
