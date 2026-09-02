@@ -7,6 +7,7 @@ import { Screen } from '@/components/app/screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { useAppData } from '@/providers/app-data-provider';
+import { deleteManagedMedia, importPhotoToManagedStorage } from '@/services/media-storage';
 
 export default function NewPhotoScreen() {
   const router = useRouter();
@@ -41,10 +42,20 @@ export default function NewPhotoScreen() {
   async function save() {
     if (!uri || !selectedAquarium || saving) return;
     setSaving(true);
+    let managedUri = '';
     try {
-      await addPhoto({ uri, caption, linkedLivestockId });
+      const managed = await importPhotoToManagedStorage(uri);
+      managedUri = managed.uri;
+      await addPhoto({
+        uri: managed.uri,
+        storageKey: managed.storageKey,
+        mediaState: 'managed',
+        caption,
+        linkedLivestockId,
+      });
       router.replace('/photos');
     } catch (error) {
+      if (managedUri) await deleteManagedMedia(managedUri);
       Alert.alert('Unable to save photo', error instanceof Error ? error.message : 'Try again.');
       setSaving(false);
     }
@@ -86,7 +97,7 @@ export default function NewPhotoScreen() {
         </>
       ) : null}
 
-      <Text style={styles.note}>Alpha note: selected images remain local to this device. Durable managed media storage will be added before public release.</Text>
+      <Text style={styles.note}>Photos are copied into BattleReef-managed local storage on this device. Cloud backup is not enabled in this Alpha.</Text>
       <PrimaryButton disabled={!uri || saving} label={saving ? 'Saving…' : 'Save to photo timeline'} onPress={() => void save()} />
     </Screen>
   );

@@ -10,7 +10,7 @@ import { formatWhen } from '@/utils/format';
 
 export default function PhotosScreen() {
   const router = useRouter();
-  const { livestock, photos, selectedAquarium } = useAppData();
+  const { livestock, markPhotoMissing, photos, selectedAquarium } = useAppData();
 
   return (
     <Screen
@@ -36,10 +36,24 @@ export default function PhotosScreen() {
             const linked = livestock.find((item) => item.id === photo.linkedLivestockId);
             return (
               <View key={photo.id} style={styles.card}>
-                <Image source={{ uri: photo.uri }} style={styles.image} />
+                {photo.mediaState === 'missing' ? (
+                  <View style={styles.missing}>
+                    <Ionicons color={Brand.amber} name="image-outline" size={28} />
+                    <Text style={styles.missingText}>Media unavailable</Text>
+                  </View>
+                ) : (
+                  <Image
+                    onError={() => void markPhotoMissing(photo.id)}
+                    source={{ uri: photo.uri }}
+                    style={styles.image}
+                  />
+                )}
                 <View style={styles.body}>
                   <Text style={styles.date}>{formatWhen(photo.capturedAt)}</Text>
                   {linked ? <Text style={styles.linked}>Linked to {linked.name}</Text> : null}
+                  <Text style={[styles.storage, photo.mediaState === 'missing' && styles.storageWarning]}>
+                    {photo.mediaState === 'managed' ? 'Managed on device' : photo.mediaState === 'legacy' ? 'Legacy local reference' : 'File missing'}
+                  </Text>
                   {photo.caption ? <Text numberOfLines={3} style={styles.caption}>{photo.caption}</Text> : null}
                 </View>
               </View>
@@ -56,8 +70,12 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: { width: '48%', flexGrow: 1, maxWidth: 360, backgroundColor: Brand.surface, borderRadius: 17, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
   image: { width: '100%', aspectRatio: 1.15, backgroundColor: Brand.surfaceRaised },
+  missing: { width: '100%', aspectRatio: 1.15, backgroundColor: Brand.surfaceRaised, alignItems: 'center', justifyContent: 'center', gap: 7 },
+  missingText: { color: Brand.amber, fontSize: 11, fontWeight: '800' },
   body: { padding: 11, gap: 4 },
   date: { color: Brand.text, fontSize: 12, fontWeight: '800' },
   linked: { color: Brand.cyan, fontSize: 10, fontWeight: '700' },
+  storage: { color: Brand.green, fontSize: 9, fontWeight: '800' },
+  storageWarning: { color: Brand.amber },
   caption: { color: Brand.textMuted, fontSize: 11, lineHeight: 16 },
 });
