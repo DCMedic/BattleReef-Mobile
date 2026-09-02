@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 7;
+const DATABASE_VERSION = 8;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -158,6 +158,14 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         ON photo_records(aquarium_id, captured_at DESC);
       CREATE INDEX IF NOT EXISTS idx_photo_records_livestock
         ON photo_records(linked_livestock_id, captured_at DESC);
+    `);
+  }
+
+  if (currentVersion < 8) {
+    await db.execAsync(`
+      ALTER TABLE photo_records ADD COLUMN storage_key TEXT;
+      ALTER TABLE photo_records ADD COLUMN media_state TEXT NOT NULL DEFAULT 'legacy'
+        CHECK (media_state IN ('managed', 'legacy', 'missing'));
     `);
   }
 
