@@ -56,6 +56,9 @@ export type TargetOverride = {
   updatedAt: string;
 };
 
+export const taskRecurrences = ['none', 'daily', 'weekly', 'monthly'] as const;
+export type TaskRecurrence = (typeof taskRecurrences)[number];
+
 export type MaintenanceTask = {
   id: string;
   aquariumId: string;
@@ -63,11 +66,14 @@ export type MaintenanceTask = {
   dueAt: string | null;
   completedAt: string | null;
   createdAt: string;
+  recurrence: TaskRecurrence;
+  notificationId: string | null;
+  parentTaskId: string | null;
 };
 
 export type NewAquarium = Pick<Aquarium, 'name' | 'type' | 'volumeGallons'>;
 export type NewReading = Pick<ParameterReading, 'parameter' | 'value' | 'note'> & { recordedAt?: string };
-export type NewTask = Pick<MaintenanceTask, 'title' | 'dueAt'>;
+export type NewTask = Pick<MaintenanceTask, 'title' | 'dueAt' | 'recurrence'>;
 
 
 export const husbandryEventKinds = ['water_change', 'feeding', 'dosing', 'observation'] as const;

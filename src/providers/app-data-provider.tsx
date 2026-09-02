@@ -22,12 +22,15 @@ import {
   listTasks,
   saveSelectedAquariumId,
   saveTargetOverride as upsertTargetOverride,
-  toggleTask as updateTask,
+  completeTask as persistTaskCompletion,
+  reopenTask as persistTaskReopen,
+  setTaskNotificationId,
   updateLivestockStatus as persistLivestockStatus,
   updateEquipmentStatus as persistEquipmentStatus,
   updatePhotoMediaState as persistPhotoMediaState,
   recordEquipmentService as persistEquipmentService,
 } from '@/data/repository';
+import { cancelTaskReminder, nextRecurringDue, scheduleTaskReminder } from '@/services/task-reminders';
 import type {
   Aquarium,
   HusbandryEvent,
@@ -162,7 +165,9 @@ export function AppDataProvider({ children }: PropsWithChildren) {
 
   const addTask = useCallback(async (input: NewTask) => {
     if (!selectedAquariumId) throw new Error('Create an aquarium before adding a task.');
-    await insertTask(db, selectedAquariumId, input);
+    const task = await insertTask(db, selectedAquariumId, input);
+    const notificationId = await scheduleTaskReminder(task);
+    if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
     setTasks(await listTasks(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
@@ -217,7 +222,19 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   }, [db, selectedAquariumId]);
 
   const toggleTask = useCallback(async (task: MaintenanceTask) => {
-    await updateTask(db, task);
+    if (task.completedAt) {
+      await persistTaskReopen(db, task);
+      const notificationId = await scheduleTaskReminder({ ...task, completedAt: null });
+      if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+    } else {
+      await cancelTaskReminder(task.notificationId);
+      const nextDueAt = nextRecurringDue(task.dueAt, task.recurrence);
+      const nextTask = await persistTaskCompletion(db, task, nextDueAt);
+      if (nextTask) {
+        const notificationId = await scheduleTaskReminder(nextTask);
+        if (notificationId) await setTaskNotificationId(db, nextTask.id, notificationId);
+      }
+    }
     if (selectedAquariumId) setTasks(await listTasks(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 

@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormScreen } from '@/components/app/form-screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
+import { taskRecurrences, type TaskRecurrence } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 
 export default function NewTaskScreen() {
@@ -13,18 +14,19 @@ export default function NewTaskScreen() {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>('none');
   const [error, setError] = useState('');
 
   const parsedDue = dueDate.trim() ? new Date(`${dueDate.trim()}T12:00:00`) : null;
   const dueValid = !parsedDue || !Number.isNaN(parsedDue.getTime());
-  const valid = Boolean(selectedAquarium) && title.trim().length >= 2 && dueValid;
+  const valid = Boolean(selectedAquarium) && title.trim().length >= 2 && dueValid && (recurrence === 'none' || Boolean(parsedDue));
 
   async function save() {
     if (!valid || saving) return;
     setSaving(true);
     setError('');
     try {
-      await addTask({ title, dueAt: parsedDue?.toISOString() ?? null });
+      await addTask({ title, dueAt: parsedDue?.toISOString() ?? null, recurrence });
       router.back();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not save the task.');
@@ -33,7 +35,7 @@ export default function NewTaskScreen() {
   }
 
   return (
-    <FormScreen intro={`Add a maintenance item for ${selectedAquarium?.name ?? 'your aquarium'}. Notification scheduling will be added in the reminders milestone.`}>
+    <FormScreen intro={`Add a maintenance item for ${selectedAquarium?.name ?? 'your aquarium'}. Due tasks can notify you locally even when BattleReef is offline.`}>
       <Field
         autoCapitalize="sentences"
         autoFocus
@@ -53,6 +55,17 @@ export default function NewTaskScreen() {
         value={dueDate}
       />
       {!dueValid ? <Text accessibilityRole="alert" style={styles.error}>Enter a valid date in YYYY-MM-DD format.</Text> : null}
+
+      <Text style={styles.label}>Repeat</Text>
+      <View style={styles.chips}>
+        {taskRecurrences.map((item) => (
+          <Pressable key={item} onPress={() => setRecurrence(item)} style={[styles.chip, recurrence === item && styles.active]}>
+            <Text style={[styles.chipText, recurrence === item && styles.activeText]}>{item}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {recurrence !== 'none' && !parsedDue ? <Text style={styles.hint}>Recurring tasks require a due date.</Text> : null}
+      <Text style={styles.hint}>BattleReef will request notification permission when the first future reminder is scheduled.</Text>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <PrimaryButton disabled={!valid || saving} label={saving ? 'Saving…' : 'Add task'} onPress={() => void save()} />
     </FormScreen>
@@ -61,4 +74,11 @@ export default function NewTaskScreen() {
 
 const styles = StyleSheet.create({
   error: { color: Brand.red, fontSize: 13, lineHeight: 18 },
+  label: { color: Brand.text, fontSize: 13, fontWeight: '800' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 11, borderWidth: 1, borderColor: Brand.border, backgroundColor: Brand.surface },
+  active: { backgroundColor: Brand.cyanSoft, borderColor: Brand.cyan },
+  chipText: { color: Brand.textMuted, fontSize: 12, fontWeight: '800', textTransform: 'capitalize' },
+  activeText: { color: Brand.cyan },
+  hint: { color: Brand.textFaint, fontSize: 11, lineHeight: 16 },
 });
