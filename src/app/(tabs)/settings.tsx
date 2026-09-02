@@ -47,13 +47,13 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Aquariums</Text><Text style={styles.count}>{aquariums.length}</Text></View>
-      <Pressable onPress={() => router.push('/aquarium/new')} style={styles.menuRow}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/aquarium/new')} style={styles.menuRow}>
         <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="add" size={21} /></View>
         <View style={styles.menuText}><Text style={styles.menuTitle}>Add aquarium</Text><Text style={styles.menuBody}>Create another independent record</Text></View>
         <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
       </Pressable>
       {selectedAquarium ? (
-        <Pressable onPress={() => router.push('/targets')} style={styles.menuRow}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/targets')} style={styles.menuRow}>
           <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="options-outline" size={21} /></View>
           <View style={styles.menuText}><Text style={styles.menuTitle}>Parameter targets</Text><Text style={styles.menuBody}>Customize target ranges for {selectedAquarium.name}</Text></View>
           <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
@@ -61,7 +61,7 @@ export default function SettingsScreen() {
       ) : null}
 
       {selectedAquarium ? (
-        <Pressable onPress={() => router.push('/photos')} style={styles.menuRow}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/photos')} style={styles.menuRow}>
           <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="images-outline" size={21} /></View>
           <View style={styles.menuText}><Text style={styles.menuTitle}>Photo timeline</Text><Text style={styles.menuBody}>Visual history for {selectedAquarium.name}</Text></View>
           <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
@@ -71,17 +71,17 @@ export default function SettingsScreen() {
       {selectedAquarium ? (
         <>
           <Text style={styles.sectionTitle}>Your data</Text>
-          <Pressable disabled={exporting} onPress={() => void runExport('backup')} style={styles.menuRow}>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: exporting }} disabled={exporting} onPress={() => void runExport('backup')} style={styles.menuRow}>
             <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="archive-outline" size={21} /></View>
             <View style={styles.menuText}><Text style={styles.menuTitle}>Export BattleReef backup</Text><Text style={styles.menuBody}>Versioned full backup of records and managed photo files for {selectedAquarium.name}</Text></View>
             <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
           </Pressable>
-          <Pressable disabled={exporting} onPress={() => void runExport('csv')} style={styles.menuRow}>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: exporting }} disabled={exporting} onPress={() => void runExport('csv')} style={styles.menuRow}>
             <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="document-text-outline" size={21} /></View>
             <View style={styles.menuText}><Text style={styles.menuTitle}>Export water tests as CSV</Text><Text style={styles.menuBody}>Portable spreadsheet-friendly history with values, timestamps, sources, and notes</Text></View>
             <Ionicons color={Brand.textFaint} name="share-outline" size={19} />
           </Pressable>
-          <Pressable onPress={() => router.push('/backup/restore')} style={styles.menuRow}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/backup/restore')} style={styles.menuRow}>
             <View style={styles.menuIcon}><Ionicons color={Brand.cyan} name="cloud-upload-outline" size={21} /></View>
             <View style={styles.menuText}><Text style={styles.menuTitle}>Restore BattleReef backup</Text><Text style={styles.menuBody}>Validate and import a BattleReef archive as a separate aquarium</Text></View>
             <Ionicons color={Brand.textFaint} name="chevron-forward" size={19} />
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Alpha 0.19</Text>
+      <Text style={styles.version}>BattleReef Mobile · Alpha 0.20</Text>
     </Screen>
   );
 }

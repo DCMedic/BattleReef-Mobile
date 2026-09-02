@@ -28,8 +28,11 @@ export default function RestoreBackupScreen() {
   const [preview, setPreview] = useState<RestorePreview | null>(null);
   const [filename, setFilename] = useState('');
   const [restoring, setRestoring] = useState(false);
+  const [choosing, setChoosing] = useState(false);
 
   async function chooseBackup() {
+    if (choosing || restoring) return;
+    setChoosing(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/json', 'text/json', 'text/plain'],
@@ -50,6 +53,8 @@ export default function RestoreBackupScreen() {
       setPreview(null);
       setFilename('');
       Alert.alert('Backup rejected', caught instanceof Error ? caught.message : 'This backup could not be validated.');
+    } finally {
+      setChoosing(false);
     }
   }
 
@@ -97,7 +102,7 @@ export default function RestoreBackupScreen() {
         <Text style={styles.intro}>
           BattleReef validates archive identity and schema before touching the database. Restores are imported as new aquariums in a single transaction.
         </Text>
-        <PrimaryButton icon="folder-open-outline" label="Choose BattleReef backup" onPress={() => void chooseBackup()} />
+        <PrimaryButton disabled={choosing || restoring} icon="folder-open-outline" label={choosing ? 'Reading backup…' : 'Choose BattleReef backup'} onPress={() => void chooseBackup()} />
       </Card>
 
       {preview ? (
@@ -136,7 +141,7 @@ export default function RestoreBackupScreen() {
           </Text>
           <PrimaryButton disabled={restoring} label={restoring ? 'Restoring…' : 'Restore as new aquarium'} onPress={() => void restore()} />
 
-          <Pressable onPress={() => { setBackup(null); setPreview(null); setFilename(''); }} style={styles.clear}>
+          <Pressable accessibilityRole="button" disabled={restoring} onPress={() => { setBackup(null); setPreview(null); setFilename(''); }} style={styles.clear}>
             <Text style={styles.clearText}>Choose a different file</Text>
           </Pressable>
         </>

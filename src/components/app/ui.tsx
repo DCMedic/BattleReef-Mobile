@@ -22,6 +22,7 @@ export function PrimaryButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.primaryButton, disabled && styles.disabled, pressed && styles.pressed]}>
@@ -56,6 +57,7 @@ export function Field({ label, hint, ...props }: TextInputProps & { label: strin
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        accessibilityLabel={label}
         placeholderTextColor={Brand.textFaint}
         selectionColor={Brand.cyan}
         style={styles.input}
@@ -93,7 +95,7 @@ export function EmptyState({
 
 export function LoadingState() {
   return (
-    <View style={styles.loading}>
+    <View accessibilityLabel="Loading BattleReef data" accessibilityRole="progressbar" style={styles.loading}>
       <ActivityIndicator color={Brand.cyan} />
     </View>
   );

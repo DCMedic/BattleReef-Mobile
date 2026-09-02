@@ -40,7 +40,14 @@ export default function TasksScreen() {
         const dueState = getTaskDueState(task);
         const dueColor = dueState === 'overdue' ? Brand.red : dueState === 'due_today' ? Brand.amber : Brand.textMuted;
         return (
-          <Pressable key={task.id} onPress={() => void toggleTask(task)} style={[styles.row, completed && styles.completedRow, dueState === 'overdue' && styles.overdueRow]}>
+          <Pressable
+            accessibilityHint={completed ? 'Reopens this maintenance task when supported.' : 'Marks this maintenance task complete.'}
+            accessibilityLabel={`${task.title}. ${completed ? 'Completed' : dueState === 'overdue' ? 'Overdue' : dueState === 'due_today' ? 'Due today' : formatDueDate(task.dueAt)}`}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: completed }}
+            key={task.id}
+            onPress={() => void toggleTask(task)}
+            style={[styles.row, completed && styles.completedRow, dueState === 'overdue' && styles.overdueRow]}>
             <View style={[styles.check, completed && styles.checked, dueState === 'overdue' && styles.overdueCheck]}>
               {completed ? <Ionicons color={Brand.navy} name="checkmark" size={18} /> : null}
             </View>
