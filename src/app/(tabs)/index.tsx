@@ -6,6 +6,7 @@ import { Screen } from '@/components/app/screen';
 import { Card, EmptyState, IconButton, LoadingState, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { getDelta, getEffectiveTargetRange, getPreviousReading, getRangeStatusForTarget } from '@/domain/context';
+import { findMaterialChanges } from '@/domain/change-analysis';
 import { calculateStabilityScore } from '@/domain/stability';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
@@ -13,7 +14,7 @@ import { formatWhen } from '@/utils/format';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { aquariums, loading, readings, selectedAquarium, selectAquarium, targetOverrides, tasks } = useAppData();
+  const { aquariums, husbandryEvents, loading, readings, selectedAquarium, selectAquarium, targetOverrides, tasks } = useAppData();
 
   const latest = readings.reduce<Partial<Record<ParameterKey, (typeof readings)[number]>>>((result, reading) => {
     if (!result[reading.parameter]) result[reading.parameter] = reading;
@@ -21,6 +22,7 @@ export default function HomeScreen() {
   }, {});
   const openTasks = tasks.filter((task) => !task.completedAt).length;
   const stability = selectedAquarium ? calculateStabilityScore(selectedAquarium, readings, targetOverrides) : null;
+  const materialChanges = findMaterialChanges(readings, husbandryEvents, tasks);
 
   return (
     <Screen
@@ -123,6 +125,33 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
+          {materialChanges.length > 0 ? (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>What changed?</Text>
+                <Text style={styles.insightCount}>{materialChanges.length} detected</Text>
+              </View>
+              {materialChanges.slice(0, 2).map((change) => (
+                <Pressable
+                  key={change.parameter}
+                  onPress={() => router.push({ pathname: '/analysis/change', params: { parameter: change.parameter } })}
+                  style={styles.insightCard}>
+                  <View style={styles.insightIcon}>
+                    <Ionicons color={Brand.cyan} name="git-compare-outline" size={21} />
+                  </View>
+                  <View style={styles.insightBody}>
+                    <Text style={styles.insightTitle}>{parameterCatalog[change.parameter].label}</Text>
+                    <Text style={styles.insightText}>{change.summary}</Text>
+                    <Text style={styles.insightMeta}>
+                      {change.context.length} recent contextual event{change.context.length === 1 ? '' : 's'} available
+                    </Text>
+                  </View>
+                  <Ionicons color={Brand.textFaint} name="chevron-forward" size={18} />
+                </Pressable>
+              ))}
+            </>
+          ) : null}
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Latest parameters</Text>
             <Pressable onPress={() => router.push('/logbook')}><Text style={styles.link}>View timeline</Text></Pressable>
@@ -213,6 +242,13 @@ const styles = StyleSheet.create({
   actionBody: { color: Brand.textMuted, fontSize: 12, lineHeight: 17, marginTop: 4 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   sectionTitle: { color: Brand.text, fontSize: 19, fontWeight: '800' },
+  insightCount: { color: Brand.cyan, fontSize: 11, fontWeight: '900' },
+  insightCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 17, padding: 14 },
+  insightIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: Brand.cyanSoft, alignItems: 'center', justifyContent: 'center' },
+  insightBody: { flex: 1 },
+  insightTitle: { color: Brand.text, fontSize: 14, fontWeight: '800' },
+  insightText: { color: Brand.textMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  insightMeta: { color: Brand.textFaint, fontSize: 10, marginTop: 5 },
   link: { color: Brand.cyan, fontSize: 13, fontWeight: '800' },
   parameterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   parameterCard: { width: '48%', flexGrow: 1, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 17, padding: 15 },
