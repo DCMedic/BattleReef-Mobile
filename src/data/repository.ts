@@ -3,11 +3,19 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   type Aquarium,
   type HusbandryEvent,
+  type Livestock,
+  type LivestockKind,
+  type LivestockStatus,
+  type Equipment,
+  type EquipmentKind,
+  type EquipmentStatus,
   type HusbandryEventKind,
   type AquariumType,
   type MaintenanceTask,
   type NewAquarium,
   type NewHusbandryEvent,
+  type NewLivestock,
+  type NewEquipment,
   type NewReading,
   type NewTask,
   parameterCatalog,
@@ -23,6 +31,8 @@ type ReadingRow = { id: string; aquarium_id: string; parameter: string; value: n
 type TaskRow = { id: string; aquarium_id: string; title: string; due_at: string | null; completed_at: string | null; created_at: string };
 type TargetRow = { aquarium_id: string; parameter: string; min_value: number; max_value: number; updated_at: string };
 type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at: string; amount: number | null; unit: string | null; subject: string | null; note: string | null; created_at: string };
+type LivestockRow = { id: string; aquarium_id: string; name: string; species: string | null; kind: string; quantity: number; status: string; acquired_at: string | null; note: string | null; created_at: string };
+type EquipmentRow = { id: string; aquarium_id: string; name: string; manufacturer: string | null; model: string | null; kind: string; status: string; installed_at: string | null; warranty_ends_at: string | null; note: string | null; created_at: string };
 
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -227,4 +237,73 @@ export async function saveSelectedAquariumId(db: SQLiteDatabase, aquariumId: str
       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
     aquariumId,
   );
+}
+
+
+function mapLivestock(row: LivestockRow): Livestock {
+  return {
+    id: row.id, aquariumId: row.aquarium_id, name: row.name, species: row.species,
+    kind: row.kind as LivestockKind, quantity: row.quantity, status: row.status as LivestockStatus,
+    acquiredAt: row.acquired_at, note: row.note, createdAt: row.created_at,
+  };
+}
+
+function mapEquipment(row: EquipmentRow): Equipment {
+  return {
+    id: row.id, aquariumId: row.aquarium_id, name: row.name, manufacturer: row.manufacturer,
+    model: row.model, kind: row.kind as EquipmentKind, status: row.status as EquipmentStatus,
+    installedAt: row.installed_at, warrantyEndsAt: row.warranty_ends_at, note: row.note, createdAt: row.created_at,
+  };
+}
+
+export async function listLivestock(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<LivestockRow>(
+    'SELECT * FROM livestock WHERE aquarium_id = ? ORDER BY status = \'active\' DESC, created_at DESC',
+    aquariumId,
+  );
+  return rows.map(mapLivestock);
+}
+
+export async function createLivestock(db: SQLiteDatabase, aquariumId: string, input: NewLivestock) {
+  const name = input.name.trim();
+  if (name.length < 2 || name.length > 100) throw new Error('Livestock name must contain between 2 and 100 characters.');
+  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 999) throw new Error('Quantity must be a whole number between 1 and 999.');
+  if (input.acquiredAt && Number.isNaN(Date.parse(input.acquiredAt))) throw new Error('Acquisition date is invalid.');
+  const item: Livestock = {
+    id: createId('livestock'), aquariumId, name, species: input.species?.trim() || null,
+    kind: input.kind, quantity: input.quantity, status: input.status, acquiredAt: input.acquiredAt,
+    note: input.note?.trim() || null, createdAt: new Date().toISOString(),
+  };
+  await db.runAsync(
+    `INSERT INTO livestock (id, aquarium_id, name, species, kind, quantity, status, acquired_at, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    item.id, item.aquariumId, item.name, item.species, item.kind, item.quantity, item.status, item.acquiredAt, item.note, item.createdAt,
+  );
+  return item;
+}
+
+export async function listEquipment(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<EquipmentRow>(
+    'SELECT * FROM equipment WHERE aquarium_id = ? ORDER BY status = \'active\' DESC, created_at DESC',
+    aquariumId,
+  );
+  return rows.map(mapEquipment);
+}
+
+export async function createEquipment(db: SQLiteDatabase, aquariumId: string, input: NewEquipment) {
+  const name = input.name.trim();
+  if (name.length < 2 || name.length > 100) throw new Error('Equipment name must contain between 2 and 100 characters.');
+  if (input.installedAt && Number.isNaN(Date.parse(input.installedAt))) throw new Error('Installation date is invalid.');
+  if (input.warrantyEndsAt && Number.isNaN(Date.parse(input.warrantyEndsAt))) throw new Error('Warranty date is invalid.');
+  const item: Equipment = {
+    id: createId('equipment'), aquariumId, name, manufacturer: input.manufacturer?.trim() || null,
+    model: input.model?.trim() || null, kind: input.kind, status: input.status, installedAt: input.installedAt,
+    warrantyEndsAt: input.warrantyEndsAt, note: input.note?.trim() || null, createdAt: new Date().toISOString(),
+  };
+  await db.runAsync(
+    `INSERT INTO equipment (id, aquarium_id, name, manufacturer, model, kind, status, installed_at, warranty_ends_at, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    item.id, item.aquariumId, item.name, item.manufacturer, item.model, item.kind, item.status, item.installedAt, item.warrantyEndsAt, item.note, item.createdAt,
+  );
+  return item;
 }
