@@ -191,8 +191,12 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const addTask = useCallback(async (input: NewTask) => {
     if (!selectedAquariumId) throw new Error('Create an aquarium before adding a task.');
     const task = await insertTask(db, selectedAquariumId, input);
-    const notificationId = await scheduleTaskReminder(task);
-    if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+    try {
+      const notificationId = await scheduleTaskReminder(task);
+      if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+    } catch {
+      // The task is durable even when the OS reminder service is unavailable.
+    }
     setTasks(await listTasks(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
@@ -249,15 +253,23 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const toggleTask = useCallback(async (task: MaintenanceTask) => {
     if (task.completedAt) {
       await persistTaskReopen(db, task);
-      const notificationId = await scheduleTaskReminder({ ...task, completedAt: null });
-      if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+      try {
+        const notificationId = await scheduleTaskReminder({ ...task, completedAt: null });
+        if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+      } catch {
+        // Reopening the task must not fail because notification scheduling failed.
+      }
     } else {
       await cancelTaskReminder(task.notificationId);
       const nextDueAt = nextRecurringDue(task.dueAt, task.recurrence);
       const nextTask = await persistTaskCompletion(db, task, nextDueAt);
       if (nextTask) {
-        const notificationId = await scheduleTaskReminder(nextTask);
-        if (notificationId) await setTaskNotificationId(db, nextTask.id, notificationId);
+        try {
+          const notificationId = await scheduleTaskReminder(nextTask);
+          if (notificationId) await setTaskNotificationId(db, nextTask.id, notificationId);
+        } catch {
+          // Task completion remains authoritative if the OS reminder service fails.
+        }
       }
     }
     if (selectedAquariumId) setTasks(await listTasks(db, selectedAquariumId));
@@ -309,8 +321,12 @@ export function AppDataProvider({ children }: PropsWithChildren) {
 
     for (const task of restoredTasks) {
       if (!task.completedAt && task.dueAt) {
-        const notificationId = await scheduleTaskReminder(task);
-        if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+        try {
+          const notificationId = await scheduleTaskReminder(task);
+          if (notificationId) await setTaskNotificationId(db, task.id, notificationId);
+        } catch {
+          // Restored task data remains valid even when reminder scheduling is unavailable.
+        }
       }
     }
 
