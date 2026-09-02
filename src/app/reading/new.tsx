@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormScreen } from '@/components/app/form-screen';
@@ -26,19 +26,16 @@ export default function NewReadingScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!parameters.includes(parameter)) {
-      setParameter(parameters[0] ?? 'temperature');
-      setValue('');
-    }
-  }, [parameter, parameters]);
+  const selectedParameter = parameters.includes(parameter)
+    ? parameter
+    : (parameters[0] ?? 'temperature');
 
   const parsedValue = Number(value);
-  const draft = { parameter, value: parsedValue, note };
+  const draft = { parameter: selectedParameter, value: parsedValue, note };
   const validation = validateReading(draft);
   const valid = Boolean(selectedAquarium) && value.trim() !== '' && validation.valid;
-  const definition = parameterCatalog[parameter];
-  const target = selectedAquarium ? getTargetRange(selectedAquarium.type, parameter) : null;
+  const definition = parameterCatalog[selectedParameter];
+  const target = selectedAquarium ? getTargetRange(selectedAquarium.type, selectedParameter) : null;
 
   async function save() {
     if (!valid || saving) return;
@@ -61,7 +58,7 @@ export default function NewReadingScreen() {
         <Text style={styles.label}>Parameter</Text>
         <View style={styles.grid}>
           {parameters.map((key) => {
-            const selected = key === parameter;
+            const selected = key === selectedParameter;
             const item = parameterCatalog[key];
             return (
               <Pressable key={key} onPress={() => { setParameter(key); setValue(''); }} style={[styles.parameter, selected && styles.parameterActive]}>
