@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -63,6 +63,25 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE,
         CHECK (min_value <= max_value)
       );
+    `);
+  }
+
+  if (currentVersion < 4) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS husbandry_events (
+        id TEXT PRIMARY KEY NOT NULL,
+        aquarium_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('water_change', 'feeding', 'dosing', 'observation')),
+        occurred_at TEXT NOT NULL,
+        amount REAL,
+        unit TEXT,
+        subject TEXT,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_husbandry_events_aquarium_occurred
+        ON husbandry_events(aquarium_id, occurred_at DESC);
     `);
   }
 

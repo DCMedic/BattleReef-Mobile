@@ -3,11 +3,13 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 
 import {
   createAquarium as insertAquarium,
+  createHusbandryEvent as insertHusbandryEvent,
   createReading as insertReading,
   createTask as insertTask,
   deleteTargetOverride as removeTargetOverride,
   getSelectedAquariumId,
   listAquariums,
+  listHusbandryEvents,
   listReadings,
   listTargetOverrides,
   listTasks,
@@ -17,8 +19,10 @@ import {
 } from '@/data/repository';
 import type {
   Aquarium,
+  HusbandryEvent,
   MaintenanceTask,
   NewAquarium,
+  NewHusbandryEvent,
   NewReading,
   NewTask,
   ParameterKey,
@@ -32,11 +36,13 @@ type AppDataValue = {
   selectedAquarium: Aquarium | null;
   readings: ParameterReading[];
   tasks: MaintenanceTask[];
+  husbandryEvents: HusbandryEvent[];
   targetOverrides: TargetOverride[];
   selectAquarium: (aquariumId: string) => Promise<void>;
   addAquarium: (input: NewAquarium) => Promise<void>;
   addReading: (input: NewReading) => Promise<void>;
   addTask: (input: NewTask) => Promise<void>;
+  addHusbandryEvent: (input: NewHusbandryEvent) => Promise<void>;
   toggleTask: (task: MaintenanceTask) => Promise<void>;
   saveTargetOverride: (parameter: ParameterKey, min: number, max: number) => Promise<void>;
   resetTargetOverride: (parameter: ParameterKey) => Promise<void>;
@@ -51,22 +57,26 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const [selectedAquariumId, setSelectedAquariumId] = useState<string | null>(null);
   const [readings, setReadings] = useState<ParameterReading[]>([]);
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
+  const [husbandryEvents, setHusbandryEvents] = useState<HusbandryEvent[]>([]);
   const [targetOverrides, setTargetOverrides] = useState<TargetOverride[]>([]);
 
   const loadDetails = useCallback(async (aquariumId: string | null) => {
     if (!aquariumId) {
       setReadings([]);
       setTasks([]);
+      setHusbandryEvents([]);
       setTargetOverrides([]);
       return;
     }
-    const [nextReadings, nextTasks, nextOverrides] = await Promise.all([
+    const [nextReadings, nextTasks, nextEvents, nextOverrides] = await Promise.all([
       listReadings(db, aquariumId),
       listTasks(db, aquariumId),
+      listHusbandryEvents(db, aquariumId),
       listTargetOverrides(db, aquariumId),
     ]);
     setReadings(nextReadings);
     setTasks(nextTasks);
+    setHusbandryEvents(nextEvents);
     setTargetOverrides(nextOverrides);
   }, [db]);
 
@@ -109,6 +119,12 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     setTasks(await listTasks(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
+  const addHusbandryEvent = useCallback(async (input: NewHusbandryEvent) => {
+    if (!selectedAquariumId) throw new Error('Create an aquarium before logging activity.');
+    await insertHusbandryEvent(db, selectedAquariumId, input);
+    setHusbandryEvents(await listHusbandryEvents(db, selectedAquariumId));
+  }, [db, selectedAquariumId]);
+
   const toggleTask = useCallback(async (task: MaintenanceTask) => {
     await updateTask(db, task);
     if (selectedAquariumId) setTasks(await listTasks(db, selectedAquariumId));
@@ -132,11 +148,11 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<AppDataValue>(() => ({
-    loading, aquariums, selectedAquarium, readings, tasks, targetOverrides,
-    selectAquarium, addAquarium, addReading, addTask, toggleTask, saveTargetOverride, resetTargetOverride,
+    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, targetOverrides,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, toggleTask, saveTargetOverride, resetTargetOverride,
   }), [
-    loading, aquariums, selectedAquarium, readings, tasks, targetOverrides,
-    selectAquarium, addAquarium, addReading, addTask, toggleTask, saveTargetOverride, resetTargetOverride,
+    loading, aquariums, selectedAquarium, readings, tasks, husbandryEvents, targetOverrides,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, toggleTask, saveTargetOverride, resetTargetOverride,
   ]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

@@ -21,6 +21,7 @@ export default function RootLayout() {
             <Stack.Screen name="aquarium/new" options={{ title: 'Add aquarium', presentation: 'modal' }} />
             <Stack.Screen name="reading/new" options={{ title: 'Log water test', presentation: 'modal' }} />
             <Stack.Screen name="task/new" options={{ title: 'Add task', presentation: 'modal' }} />
+            <Stack.Screen name="event/new" options={{ title: 'Log activity', presentation: 'modal' }} />
             <Stack.Screen name="targets" options={{ title: 'Parameter targets' }} />
           </Stack>
         </ThemeProvider>
