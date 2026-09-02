@@ -13,11 +13,15 @@ import {
   getSelectedAquariumId,
   listAquariums,
   listHusbandryEvents,
+  listAllHusbandryEvents,
   listPhotos,
+  listAllPhotos,
   listLivestock,
   listEquipment,
   listInventoryEvents,
+  listAllInventoryEvents,
   listReadings,
+  listAllReadings,
   listTargetOverrides,
   listTasks,
   saveSelectedAquariumId,
@@ -32,7 +36,7 @@ import {
 } from '@/data/repository';
 import { cancelTaskReminder, nextRecurringDue, scheduleTaskReminder } from '@/services/task-reminders';
 import { restoreBackup } from '@/services/data-restore';
-import type { BattleReefBackup } from '@/services/data-export';
+import type { AquariumExportData, BattleReefBackup } from '@/services/data-export';
 import type {
   Aquarium,
   HusbandryEvent,
@@ -84,6 +88,7 @@ type AppDataValue = {
   saveTargetOverride: (parameter: ParameterKey, min: number, max: number) => Promise<void>;
   resetTargetOverride: (parameter: ParameterKey) => Promise<void>;
   restoreBackupArchive: (backup: BattleReefBackup) => Promise<void>;
+  getSelectedAquariumExportData: () => Promise<AquariumExportData>;
 };
 
 const AppDataContext = createContext<AppDataValue | null>(null);
@@ -261,6 +266,33 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     setTargetOverrides(await listTargetOverrides(db, selectedAquariumId));
   }, [db, selectedAquariumId]);
 
+  const getSelectedAquariumExportData = useCallback(async (): Promise<AquariumExportData> => {
+    if (!selectedAquarium) throw new Error('Select an aquarium before exporting data.');
+
+    const [allReadings, allHusbandryEvents, allInventoryEvents, allPhotos, allTasks, allLivestock, allEquipment, allTargets] = await Promise.all([
+      listAllReadings(db, selectedAquarium.id),
+      listAllHusbandryEvents(db, selectedAquarium.id),
+      listAllInventoryEvents(db, selectedAquarium.id),
+      listAllPhotos(db, selectedAquarium.id),
+      listTasks(db, selectedAquarium.id),
+      listLivestock(db, selectedAquarium.id),
+      listEquipment(db, selectedAquarium.id),
+      listTargetOverrides(db, selectedAquarium.id),
+    ]);
+
+    return {
+      aquarium: selectedAquarium,
+      readings: allReadings,
+      tasks: allTasks,
+      husbandryEvents: allHusbandryEvents,
+      livestock: allLivestock,
+      equipment: allEquipment,
+      inventoryEvents: allInventoryEvents,
+      targetOverrides: allTargets,
+      photos: allPhotos,
+    };
+  }, [db, selectedAquarium]);
+
   const restoreBackupArchive = useCallback(async (backup: BattleReefBackup) => {
     const restoredAquariumId = await restoreBackup(db, backup);
     const restoredTasks = await listTasks(db, restoredAquariumId);
@@ -285,10 +317,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AppDataValue>(() => ({
     loading, dataError, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive, getSelectedAquariumExportData,
   }), [
     loading, dataError, aquariums, selectedAquarium, readings, tasks, husbandryEvents, livestock, equipment, inventoryEvents, targetOverrides, photos,
-    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive,
+    selectAquarium, addAquarium, addReading, addTask, addHusbandryEvent, addLivestock, addEquipment, setLivestockStatus, setEquipmentStatus, addEquipmentService, addPhoto, markPhotoMissing, toggleTask, saveTargetOverride, resetTargetOverride, restoreBackupArchive, getSelectedAquariumExportData,
   ]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
