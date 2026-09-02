@@ -155,7 +155,7 @@ export default function NewPhotoScreen() {
         </>
       ) : null}
 
-      <Text style={styles.note}>Photos are copied into BattleReef-managed local storage on this device. Cloud backup is not enabled in this Alpha.</Text>
+      <Text style={styles.note}>Photos are copied into BattleReef-managed local storage on this device. Cloud media sync is not enabled in this beta.</Text>
       <PrimaryButton disabled={!uri || saving} label={saving ? 'Saving…' : 'Save to photo timeline'} onPress={() => void save()} />
     </Screen>
   );
