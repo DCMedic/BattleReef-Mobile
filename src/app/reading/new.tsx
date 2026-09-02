@@ -1,31 +1,44 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormScreen } from '@/components/app/form-screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
+import { getApplicableParameters, getTargetRange } from '@/domain/context';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { validateReading } from '@/domain/validation';
 import { useAppData } from '@/providers/app-data-provider';
 
-const parameters = Object.keys(parameterCatalog) as ParameterKey[];
-
 export default function NewReadingScreen() {
   const router = useRouter();
   const { addReading, selectedAquarium } = useAppData();
-  const [parameter, setParameter] = useState<ParameterKey>('temperature');
+  const parameters = useMemo(
+    () => selectedAquarium
+      ? getApplicableParameters(selectedAquarium.type)
+      : (Object.keys(parameterCatalog) as ParameterKey[]),
+    [selectedAquarium],
+  );
+  const [parameter, setParameter] = useState<ParameterKey>(parameters[0] ?? 'temperature');
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!parameters.includes(parameter)) {
+      setParameter(parameters[0] ?? 'temperature');
+      setValue('');
+    }
+  }, [parameter, parameters]);
 
   const parsedValue = Number(value);
   const draft = { parameter, value: parsedValue, note };
   const validation = validateReading(draft);
   const valid = Boolean(selectedAquarium) && value.trim() !== '' && validation.valid;
   const definition = parameterCatalog[parameter];
+  const target = selectedAquarium ? getTargetRange(selectedAquarium.type, parameter) : null;
 
   async function save() {
     if (!valid || saving) return;
@@ -40,11 +53,10 @@ export default function NewReadingScreen() {
     }
   }
 
-  const inlineError =
-    value.trim() !== '' && !validation.valid ? validation.message : '';
+  const inlineError = value.trim() !== '' && !validation.valid ? validation.message : '';
 
   return (
-    <FormScreen intro={`Record a manual test for ${selectedAquarium?.name ?? 'your aquarium'}. Manual entries are stored with provenance so future imports and sensor data can remain distinguishable.`}>
+    <FormScreen intro={`Record a manual test for ${selectedAquarium?.name ?? 'your aquarium'}. Parameter choices adapt to this aquarium type.`}>
       <View style={styles.group}>
         <Text style={styles.label}>Parameter</Text>
         <View style={styles.grid}>
@@ -69,6 +81,11 @@ export default function NewReadingScreen() {
         placeholder="0.0"
         value={value}
       />
+      {target ? (
+        <Text style={styles.targetText}>
+          Typical target for this aquarium: {target.min}–{target.max} {definition.unit}
+        </Text>
+      ) : null}
       {inlineError ? <Text accessibilityRole="alert" style={styles.error}>{inlineError}</Text> : null}
       <Field
         label="Note (optional)"
@@ -84,7 +101,7 @@ export default function NewReadingScreen() {
         <Ionicons color={Brand.green} name="person-circle-outline" size={18} />
         <Text style={styles.provenanceText}>Source: Manual entry · Confirmed by you</Text>
       </View>
-      <PrimaryButton disabled={!valid || saving} label={saving ? 'Saving…' : 'Save & view history'} onPress={() => void save()} />
+      <PrimaryButton disabled={!valid || saving} label={saving ? 'Saving…' : 'Save & view timeline'} onPress={() => void save()} />
     </FormScreen>
   );
 }
@@ -97,6 +114,7 @@ const styles = StyleSheet.create({
   parameterActive: { backgroundColor: Brand.cyanSoft, borderColor: Brand.cyan },
   parameterText: { color: Brand.textMuted, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   parameterTextActive: { color: Brand.cyan },
+  targetText: { color: Brand.cyan, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   noteInput: { minHeight: 94, paddingTop: 14, textAlignVertical: 'top' },
   provenance: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#0D382F', borderRadius: 12, padding: 12 },
   provenanceText: { color: Brand.green, fontSize: 12, fontWeight: '700', flex: 1 },

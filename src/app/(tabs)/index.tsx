@@ -5,6 +5,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/app/screen';
 import { Card, EmptyState, IconButton, LoadingState, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
+import { getDelta, getPreviousReading, getRangeStatus, getTargetRange } from '@/domain/context';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
@@ -103,7 +104,7 @@ export default function HomeScreen() {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Latest parameters</Text>
-            <Pressable onPress={() => router.push('/logbook')}><Text style={styles.link}>View logbook</Text></Pressable>
+            <Pressable onPress={() => router.push('/logbook')}><Text style={styles.link}>View timeline</Text></Pressable>
           </View>
 
           {Object.keys(latest).length === 0 ? (
@@ -116,11 +117,36 @@ export default function HomeScreen() {
             <View style={styles.parameterGrid}>
               {(Object.keys(latest) as ParameterKey[]).slice(0, 6).map((key) => {
                 const reading = latest[key]!;
+                const previous = getPreviousReading(readings, reading);
+                const delta = getDelta(reading, previous);
+                const status = getRangeStatus(selectedAquarium.type, reading);
+                const target = getTargetRange(selectedAquarium.type, key);
+                const statusColor =
+                  status === 'in_range' ? Brand.green :
+                  status === 'unconfigured' ? Brand.textFaint :
+                  Brand.amber;
                 return (
                   <View key={key} style={styles.parameterCard}>
-                    <Text style={styles.parameterLabel}>{parameterCatalog[key].label}</Text>
+                    <View style={styles.parameterTopRow}>
+                      <Text style={styles.parameterLabel}>{parameterCatalog[key].label}</Text>
+                      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                    </View>
                     <Text style={styles.parameterValue}>{reading.value} <Text style={styles.unit}>{reading.unit}</Text></Text>
-                    <Text style={styles.parameterTime}>{formatWhen(reading.recordedAt)}</Text>
+                    <View style={styles.trendRow}>
+                      <Text style={[styles.parameterTime, { flex: 1 }]}>{formatWhen(reading.recordedAt)}</Text>
+                      {delta !== null ? (
+                        <Text style={styles.delta}>
+                          {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'} {Math.abs(delta).toFixed(parameterCatalog[key].decimals)}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {target ? (
+                      <Text style={styles.target}>
+                        Target {target.min}–{target.max} {reading.unit}
+                      </Text>
+                    ) : (
+                      <Text style={styles.target}>Custom target not set</Text>
+                    )}
                   </View>
                 );
               })}
@@ -162,8 +188,13 @@ const styles = StyleSheet.create({
   link: { color: Brand.cyan, fontSize: 13, fontWeight: '800' },
   parameterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   parameterCard: { width: '48%', flexGrow: 1, backgroundColor: Brand.surface, borderColor: Brand.border, borderWidth: 1, borderRadius: 17, padding: 15 },
+  parameterTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   parameterLabel: { color: Brand.textMuted, fontSize: 12, fontWeight: '700' },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
   parameterValue: { color: Brand.text, fontSize: 22, fontWeight: '900', marginTop: 7 },
   unit: { color: Brand.textMuted, fontSize: 12, fontWeight: '700' },
-  parameterTime: { color: Brand.textFaint, fontSize: 11, marginTop: 5 },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
+  parameterTime: { color: Brand.textFaint, fontSize: 11 },
+  delta: { color: Brand.cyan, fontSize: 11, fontWeight: '800' },
+  target: { color: Brand.textFaint, fontSize: 10, lineHeight: 14, marginTop: 6 },
 });
