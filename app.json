@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "BattleReef",
+    "slug": "battlereef-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/app-icon.png",
+    "scheme": "battlereef",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "icon": "./assets/brand/app-icon.png",
+      "bundleIdentifier": "com.battlereef.mobile",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.battlereef.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#061522",
+        "foregroundImage": "./assets/brand/adaptive-foreground.png",
+        "backgroundImage": "./assets/brand/adaptive-background.png",
+        "monochromeImage": "./assets/brand/adaptive-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/brand/app-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#061522",
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      "expo-sqlite",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
