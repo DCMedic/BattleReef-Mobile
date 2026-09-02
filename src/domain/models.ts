@@ -147,6 +147,11 @@ export type InventoryEvent = {
 };
 
 
+export const photoViewpoints = ['front', 'left', 'right', 'top', 'macro', 'other'] as const;
+export type PhotoViewpoint = (typeof photoViewpoints)[number];
+export const photoLightingProfiles = ['display', 'white', 'actinic', 'ambient', 'unknown'] as const;
+export type PhotoLightingProfile = (typeof photoLightingProfiles)[number];
+
 export type PhotoRecord = {
   id: string;
   aquariumId: string;
@@ -157,8 +162,11 @@ export type PhotoRecord = {
   createdAt: string;
   storageKey: string | null;
   mediaState: 'managed' | 'legacy' | 'missing';
+  viewpoint: PhotoViewpoint | null;
+  lightingProfile: PhotoLightingProfile | null;
+  guidedCapture: boolean;
 };
 
-export type NewPhotoRecord = Pick<PhotoRecord, 'uri' | 'caption' | 'linkedLivestockId' | 'storageKey' | 'mediaState'> & {
+export type NewPhotoRecord = Pick<PhotoRecord, 'uri' | 'caption' | 'linkedLivestockId' | 'storageKey' | 'mediaState' | 'viewpoint' | 'lightingProfile' | 'guidedCapture'> & {
   capturedAt?: string;
 };
