@@ -41,4 +41,6 @@ npm run export:web
 
 ## Status
 
-Foundation milestone `0.1.0`. The repository is not yet an App Store or Play Store release candidate.
+Beta candidate `0.9.0` (build 1). Core MVP development is complete and the repository includes preview/production EAS build profiles, local-first backup/restore, release configuration validation, and pre-beta QA hardening.
+
+Store distribution still requires the project to be linked to the authorized Expo/EAS account and the corresponding Apple Developer/App Store Connect and Google Play Console applications.
