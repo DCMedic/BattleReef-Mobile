@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 6;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -117,6 +117,28 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_equipment_aquarium_status ON equipment(aquarium_id, status);
+    `);
+  }
+
+  if (currentVersion < 6) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS inventory_events (
+        id TEXT PRIMARY KEY NOT NULL,
+        aquarium_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL CHECK (entity_type IN ('livestock', 'equipment')),
+        entity_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('status_change', 'service', 'note')),
+        from_status TEXT,
+        to_status TEXT,
+        note TEXT,
+        occurred_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_inventory_events_aquarium_occurred
+        ON inventory_events(aquarium_id, occurred_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inventory_events_entity
+        ON inventory_events(entity_type, entity_id, occurred_at DESC);
     `);
   }
 
