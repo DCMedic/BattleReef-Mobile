@@ -21,6 +21,7 @@ export default function EquipmentDetailScreen() {
   }
 
   async function addService() {
+    if (!item) return;
     setMessage('');
     try {
       await addEquipmentService(item, serviceNote);
