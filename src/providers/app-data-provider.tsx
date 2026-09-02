@@ -267,21 +267,22 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   }, [db, selectedAquariumId]);
 
   const getSelectedAquariumExportData = useCallback(async (): Promise<AquariumExportData> => {
-    if (!selectedAquarium) throw new Error('Select an aquarium before exporting data.');
+    const aquarium = aquariums.find((item) => item.id === selectedAquariumId);
+    if (!aquarium) throw new Error('Select an aquarium before exporting data.');
 
     const [allReadings, allHusbandryEvents, allInventoryEvents, allPhotos, allTasks, allLivestock, allEquipment, allTargets] = await Promise.all([
-      listAllReadings(db, selectedAquarium.id),
-      listAllHusbandryEvents(db, selectedAquarium.id),
-      listAllInventoryEvents(db, selectedAquarium.id),
-      listAllPhotos(db, selectedAquarium.id),
-      listTasks(db, selectedAquarium.id),
-      listLivestock(db, selectedAquarium.id),
-      listEquipment(db, selectedAquarium.id),
-      listTargetOverrides(db, selectedAquarium.id),
+      listAllReadings(db, aquarium.id),
+      listAllHusbandryEvents(db, aquarium.id),
+      listAllInventoryEvents(db, aquarium.id),
+      listAllPhotos(db, aquarium.id),
+      listTasks(db, aquarium.id),
+      listLivestock(db, aquarium.id),
+      listEquipment(db, aquarium.id),
+      listTargetOverrides(db, aquarium.id),
     ]);
 
     return {
-      aquarium: selectedAquarium,
+      aquarium,
       readings: allReadings,
       tasks: allTasks,
       husbandryEvents: allHusbandryEvents,
@@ -291,7 +292,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       targetOverrides: allTargets,
       photos: allPhotos,
     };
-  }, [db, selectedAquarium]);
+  }, [aquariums, db, selectedAquariumId]);
 
   const restoreBackupArchive = useCallback(async (backup: BattleReefBackup) => {
     const restoredAquariumId = await restoreBackup(db, backup);
