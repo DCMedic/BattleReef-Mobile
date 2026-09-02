@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 4;
+const DATABASE_VERSION = 5;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -82,6 +82,41 @@ export async function migrateDatabase(db: SQLiteDatabase) {
       );
       CREATE INDEX IF NOT EXISTS idx_husbandry_events_aquarium_occurred
         ON husbandry_events(aquarium_id, occurred_at DESC);
+    `);
+  }
+
+  if (currentVersion < 5) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS livestock (
+        id TEXT PRIMARY KEY NOT NULL,
+        aquarium_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        species TEXT,
+        kind TEXT NOT NULL CHECK (kind IN ('fish', 'coral', 'invertebrate', 'plant', 'other')),
+        quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+        status TEXT NOT NULL CHECK (status IN ('active', 'quarantine', 'removed', 'deceased')),
+        acquired_at TEXT,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_livestock_aquarium_status ON livestock(aquarium_id, status);
+
+      CREATE TABLE IF NOT EXISTS equipment (
+        id TEXT PRIMARY KEY NOT NULL,
+        aquarium_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        manufacturer TEXT,
+        model TEXT,
+        kind TEXT NOT NULL CHECK (kind IN ('lighting', 'filtration', 'pump', 'heater', 'doser', 'monitor', 'other')),
+        status TEXT NOT NULL CHECK (status IN ('active', 'spare', 'service', 'retired')),
+        installed_at TEXT,
+        warranty_ends_at TEXT,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (aquarium_id) REFERENCES aquariums(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_equipment_aquarium_status ON equipment(aquarium_id, status);
     `);
   }
 
