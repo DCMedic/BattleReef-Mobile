@@ -41,7 +41,7 @@ export default function SettingsScreen() {
         <View style={styles.brandRow}><Image source={require('@/assets/brand/battlereef-logo-full.webp')} style={styles.wordmark} /></View>
         <View style={styles.planRow}>
           <View><Text style={styles.planLabel}>CURRENT PLAN</Text><Text style={styles.planName}>Basic</Text></View>
-          <View style={styles.badge}><Text style={styles.badgeText}>ALPHA</Text></View>
+          <View style={styles.badge}><Text style={styles.badgeText}>BETA</Text></View>
         </View>
         <Text style={styles.planBody}>Core aquarium records, water-test logging, maintenance, target ranges, and transparent stability insights. No external-device control.</Text>
       </Card>
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <Text style={styles.version}>BattleReef Mobile · Alpha 0.20</Text>
+      <Text style={styles.version}>BattleReef Mobile · Beta 0.9.0 (1)</Text>
     </Screen>
   );
 }
