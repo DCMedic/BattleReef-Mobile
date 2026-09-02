@@ -68,3 +68,23 @@ export type MaintenanceTask = {
 export type NewAquarium = Pick<Aquarium, 'name' | 'type' | 'volumeGallons'>;
 export type NewReading = Pick<ParameterReading, 'parameter' | 'value' | 'note'> & { recordedAt?: string };
 export type NewTask = Pick<MaintenanceTask, 'title' | 'dueAt'>;
+
+
+export const husbandryEventKinds = ['water_change', 'feeding', 'dosing', 'observation'] as const;
+export type HusbandryEventKind = (typeof husbandryEventKinds)[number];
+
+export type HusbandryEvent = {
+  id: string;
+  aquariumId: string;
+  kind: HusbandryEventKind;
+  occurredAt: string;
+  amount: number | null;
+  unit: string | null;
+  subject: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
+export type NewHusbandryEvent = Pick<HusbandryEvent, 'kind' | 'amount' | 'unit' | 'subject' | 'note'> & {
+  occurredAt?: string;
+};

@@ -2,9 +2,12 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   type Aquarium,
+  type HusbandryEvent,
+  type HusbandryEventKind,
   type AquariumType,
   type MaintenanceTask,
   type NewAquarium,
+  type NewHusbandryEvent,
   type NewReading,
   type NewTask,
   parameterCatalog,
@@ -19,6 +22,7 @@ type AquariumRow = { id: string; name: string; type: string; volume_gallons: num
 type ReadingRow = { id: string; aquarium_id: string; parameter: string; value: number; unit: string; recorded_at: string; note: string | null; source: string; confidence: number | null; confirmed_at: string | null };
 type TaskRow = { id: string; aquarium_id: string; title: string; due_at: string | null; completed_at: string | null; created_at: string };
 type TargetRow = { aquarium_id: string; parameter: string; min_value: number; max_value: number; updated_at: string };
+type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at: string; amount: number | null; unit: string | null; subject: string | null; note: string | null; created_at: string };
 
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -49,6 +53,20 @@ function mapTask(row: TaskRow): MaintenanceTask {
 
 function mapTarget(row: TargetRow): TargetOverride {
   return { aquariumId: row.aquarium_id, parameter: row.parameter as ParameterKey, min: row.min_value, max: row.max_value, updatedAt: row.updated_at };
+}
+
+function mapHusbandryEvent(row: HusbandryRow): HusbandryEvent {
+  return {
+    id: row.id,
+    aquariumId: row.aquarium_id,
+    kind: row.kind as HusbandryEventKind,
+    occurredAt: row.occurred_at,
+    amount: row.amount,
+    unit: row.unit,
+    subject: row.subject,
+    note: row.note,
+    createdAt: row.created_at,
+  };
 }
 
 export async function listAquariums(db: SQLiteDatabase) {
@@ -118,6 +136,61 @@ export async function createTask(db: SQLiteDatabase, aquariumId: string, input: 
 export async function toggleTask(db: SQLiteDatabase, task: MaintenanceTask) {
   const completedAt = task.completedAt ? null : new Date().toISOString();
   await db.runAsync('UPDATE maintenance_tasks SET completed_at = ? WHERE id = ?', completedAt, task.id);
+}
+
+export async function listHusbandryEvents(db: SQLiteDatabase, aquariumId: string) {
+  const rows = await db.getAllAsync<HusbandryRow>(
+    'SELECT * FROM husbandry_events WHERE aquarium_id = ? ORDER BY occurred_at DESC LIMIT 250',
+    aquariumId,
+  );
+  return rows.map(mapHusbandryEvent);
+}
+
+export async function createHusbandryEvent(
+  db: SQLiteDatabase,
+  aquariumId: string,
+  input: NewHusbandryEvent,
+) {
+  const now = new Date().toISOString();
+  const occurredAt = input.occurredAt ?? now;
+  if (Number.isNaN(Date.parse(occurredAt))) throw new Error('Event time is invalid.');
+
+  const subject = input.subject?.trim() || null;
+  const note = input.note?.trim() || null;
+  if ((subject?.length ?? 0) > 100) throw new Error('Event subject cannot exceed 100 characters.');
+  if ((note?.length ?? 0) > 240) throw new Error('Event note cannot exceed 240 characters.');
+
+  if (input.kind === 'water_change') {
+    if (!Number.isFinite(input.amount) || (input.amount ?? 0) <= 0) throw new Error('Enter a water-change amount greater than zero.');
+    if (!input.unit) throw new Error('Choose gallons or percent for the water change.');
+  }
+  if ((input.kind === 'feeding' || input.kind === 'dosing') && !subject) {
+    throw new Error(input.kind === 'feeding' ? 'Enter the food used.' : 'Enter the additive dosed.');
+  }
+  if (input.amount !== null && input.amount !== undefined && (!Number.isFinite(input.amount) || input.amount < 0)) {
+    throw new Error('Amount must be zero or greater.');
+  }
+  if (input.kind === 'observation' && !note) throw new Error('Enter an observation.');
+
+  const event: HusbandryEvent = {
+    id: createId('event'),
+    aquariumId,
+    kind: input.kind,
+    occurredAt,
+    amount: input.amount ?? null,
+    unit: input.unit?.trim() || null,
+    subject,
+    note,
+    createdAt: now,
+  };
+
+  await db.runAsync(
+    `INSERT INTO husbandry_events
+      (id, aquarium_id, kind, occurred_at, amount, unit, subject, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    event.id, event.aquariumId, event.kind, event.occurredAt, event.amount, event.unit, event.subject, event.note, event.createdAt,
+  );
+  return event;
 }
 
 export async function listTargetOverrides(db: SQLiteDatabase, aquariumId: string) {

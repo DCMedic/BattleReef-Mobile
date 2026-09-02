@@ -116,10 +116,10 @@ export default function HomeScreen() {
               <Text style={styles.actionTitle}>Log water test</Text>
               <Text style={styles.actionBody}>Record a parameter reading</Text>
             </Pressable>
-            <Pressable onPress={() => router.push('/task/new')} style={styles.quickAction}>
-              <View style={styles.actionIcon}><Ionicons color={Brand.cyan} name="calendar" size={22} /></View>
-              <Text style={styles.actionTitle}>Add maintenance</Text>
-              <Text style={styles.actionBody}>Create a care task</Text>
+            <Pressable onPress={() => router.push('/event/new')} style={styles.quickAction}>
+              <View style={styles.actionIcon}><Ionicons color={Brand.cyan} name="add-circle" size={22} /></View>
+              <Text style={styles.actionTitle}>Log activity</Text>
+              <Text style={styles.actionBody}>Water change, feeding, dosing, or observation</Text>
             </Pressable>
           </View>
 

@@ -21,14 +21,16 @@ const sourceLabels = {
 type TimelineItem =
   | { kind: 'reading'; at: string; id: string; reading: ReturnType<typeof useAppData>['readings'][number] }
   | { kind: 'task-created'; at: string; id: string; title: string }
-  | { kind: 'task-completed'; at: string; id: string; title: string };
+  | { kind: 'task-completed'; at: string; id: string; title: string }
+  | { kind: 'husbandry'; at: string; id: string; event: ReturnType<typeof useAppData>['husbandryEvents'][number] };
 
 export default function LogbookScreen() {
   const router = useRouter();
-  const { loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
+  const { husbandryEvents, loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
 
   const timeline: TimelineItem[] = [
     ...readings.map((reading) => ({ kind: 'reading' as const, at: reading.recordedAt, id: reading.id, reading })),
+    ...husbandryEvents.map((event) => ({ kind: 'husbandry' as const, at: event.occurredAt, id: event.id, event })),
     ...tasks.map((task) => ({ kind: 'task-created' as const, at: task.createdAt, id: `${task.id}-created`, title: task.title })),
     ...tasks
       .filter((task) => task.completedAt)
@@ -83,6 +85,32 @@ export default function LogbookScreen() {
                 <Text style={styles.time}>{formatWhen(reading.recordedAt)}{reading.note ? ` · ${reading.note}` : ''}</Text>
               </View>
               <Text style={styles.value}>{reading.value} <Text style={styles.unit}>{reading.unit}</Text></Text>
+            </View>
+          );
+        }
+
+        if (item.kind === 'husbandry') {
+          const event = item.event;
+          const config = {
+            water_change: { label: 'Water change', icon: 'water-outline' as const },
+            feeding: { label: 'Feeding', icon: 'restaurant-outline' as const },
+            dosing: { label: 'Dosing', icon: 'medical-outline' as const },
+            observation: { label: 'Observation', icon: 'eye-outline' as const },
+          }[event.kind];
+          const details = [
+            event.subject,
+            event.amount !== null ? `${event.amount}${event.unit ? ` ${event.unit}` : ''}` : null,
+            event.note,
+          ].filter(Boolean).join(' · ');
+          return (
+            <View key={item.id} style={styles.row}>
+              <View style={styles.icon}>
+                <Ionicons color={Brand.cyan} name={config.icon} size={20} />
+              </View>
+              <View style={styles.details}>
+                <Text style={styles.label}>{config.label}</Text>
+                <Text style={styles.time}>{formatWhen(event.occurredAt)}{details ? ` · ${details}` : ''}</Text>
+              </View>
             </View>
           );
         }
