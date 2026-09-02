@@ -38,7 +38,7 @@ type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at
 type LivestockRow = { id: string; aquarium_id: string; name: string; species: string | null; kind: string; quantity: number; status: string; acquired_at: string | null; note: string | null; created_at: string };
 type EquipmentRow = { id: string; aquarium_id: string; name: string; manufacturer: string | null; model: string | null; kind: string; status: string; installed_at: string | null; warranty_ends_at: string | null; note: string | null; created_at: string };
 type InventoryEventRow = { id: string; aquarium_id: string; entity_type: string; entity_id: string; kind: string; from_status: string | null; to_status: string | null; note: string | null; occurred_at: string; created_at: string };
-type PhotoRow = { id: string; aquarium_id: string; uri: string; caption: string | null; linked_livestock_id: string | null; captured_at: string; created_at: string };
+type PhotoRow = { id: string; aquarium_id: string; uri: string; caption: string | null; linked_livestock_id: string | null; captured_at: string; created_at: string; storage_key: string | null; media_state: string };
 
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -82,6 +82,8 @@ function mapHusbandryEvent(row: HusbandryRow): HusbandryEvent {
     subject: row.subject,
     note: row.note,
     createdAt: row.created_at,
+    storageKey: row.storage_key,
+    mediaState: row.media_state as PhotoRecord['mediaState'],
   };
 }
 
@@ -440,13 +442,24 @@ export async function createPhotoRecord(db: SQLiteDatabase, aquariumId: string, 
     linkedLivestockId: input.linkedLivestockId ?? null,
     capturedAt,
     createdAt: new Date().toISOString(),
+    storageKey: input.storageKey,
+    mediaState: input.mediaState,
   };
 
   await db.runAsync(
     `INSERT INTO photo_records
-      (id, aquarium_id, uri, caption, linked_livestock_id, captured_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    photo.id, photo.aquariumId, photo.uri, photo.caption, photo.linkedLivestockId, photo.capturedAt, photo.createdAt,
+      (id, aquarium_id, uri, caption, linked_livestock_id, captured_at, created_at, storage_key, media_state)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    photo.id, photo.aquariumId, photo.uri, photo.caption, photo.linkedLivestockId, photo.capturedAt, photo.createdAt, photo.storageKey, photo.mediaState,
   );
   return photo;
+}
+
+
+export async function updatePhotoMediaState(
+  db: SQLiteDatabase,
+  photoId: string,
+  mediaState: PhotoRecord['mediaState'],
+) {
+  await db.runAsync('UPDATE photo_records SET media_state = ? WHERE id = ?', mediaState, photoId);
 }
