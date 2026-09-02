@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/app/screen';
 import { EmptyState, IconButton, LoadingState, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
-import { getRangeStatus } from '@/domain/context';
+import { getEffectiveTargetRange, getRangeStatusForTarget } from '@/domain/context';
 import { parameterCatalog } from '@/domain/models';
 import { useAppData } from '@/providers/app-data-provider';
 import { formatWhen } from '@/utils/format';
@@ -25,7 +25,7 @@ type TimelineItem =
 
 export default function LogbookScreen() {
   const router = useRouter();
-  const { loading, readings, selectedAquarium, tasks } = useAppData();
+  const { loading, readings, selectedAquarium, targetOverrides, tasks } = useAppData();
 
   const timeline: TimelineItem[] = [
     ...readings.map((reading) => ({ kind: 'reading' as const, at: reading.recordedAt, id: reading.id, reading })),
@@ -61,7 +61,8 @@ export default function LogbookScreen() {
       {selectedAquarium ? timeline.map((item) => {
         if (item.kind === 'reading') {
           const reading = item.reading;
-          const status = getRangeStatus(selectedAquarium.type, reading);
+          const target = getEffectiveTargetRange(selectedAquarium.id, selectedAquarium.type, reading.parameter, targetOverrides);
+          const status = getRangeStatusForTarget(reading, target);
           const statusColor =
             status === 'in_range' ? Brand.green :
             status === 'unconfigured' ? Brand.textFaint :
