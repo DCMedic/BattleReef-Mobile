@@ -14,6 +14,7 @@ import {
   type HusbandryEventKind,
   type AquariumType,
   type MaintenanceTask,
+  type TaskRecurrence,
   type NewAquarium,
   type NewHusbandryEvent,
   type NewLivestock,
@@ -34,7 +35,7 @@ import { validateAquarium, validateReading } from '@/domain/validation';
 
 type AquariumRow = { id: string; name: string; type: string; volume_gallons: number; created_at: string };
 type ReadingRow = { id: string; aquarium_id: string; parameter: string; value: number; unit: string; recorded_at: string; note: string | null; source: string; confidence: number | null; confirmed_at: string | null };
-type TaskRow = { id: string; aquarium_id: string; title: string; due_at: string | null; completed_at: string | null; created_at: string };
+type TaskRow = { id: string; aquarium_id: string; title: string; due_at: string | null; completed_at: string | null; created_at: string; recurrence: string; notification_id: string | null; parent_task_id: string | null };
 type TargetRow = { aquarium_id: string; parameter: string; min_value: number; max_value: number; updated_at: string };
 type HusbandryRow = { id: string; aquarium_id: string; kind: string; occurred_at: string; amount: number | null; unit: string | null; subject: string | null; note: string | null; created_at: string };
 type LivestockRow = { id: string; aquarium_id: string; name: string; species: string | null; kind: string; quantity: number; status: string; acquired_at: string | null; note: string | null; created_at: string };
@@ -66,7 +67,17 @@ function mapReading(row: ReadingRow): ParameterReading {
 }
 
 function mapTask(row: TaskRow): MaintenanceTask {
-  return { id: row.id, aquariumId: row.aquarium_id, title: row.title, dueAt: row.due_at, completedAt: row.completed_at, createdAt: row.created_at };
+  return {
+    id: row.id,
+    aquariumId: row.aquarium_id,
+    title: row.title,
+    dueAt: row.due_at,
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+    recurrence: row.recurrence as TaskRecurrence,
+    notificationId: row.notification_id,
+    parentTaskId: row.parent_task_id,
+  };
 }
 
 function mapTarget(row: TargetRow): TargetOverride {
@@ -142,18 +153,68 @@ export async function listTasks(db: SQLiteDatabase, aquariumId: string) {
 export async function createTask(db: SQLiteDatabase, aquariumId: string, input: NewTask) {
   const title = input.title.trim();
   if (title.length < 2 || title.length > 120) throw new Error('Task title must contain between 2 and 120 characters.');
-  const task: MaintenanceTask = { id: createId('task'), aquariumId, title, dueAt: input.dueAt, completedAt: null, createdAt: new Date().toISOString() };
+  if (input.recurrence !== 'none' && !input.dueAt) throw new Error('Recurring tasks require a due date.');
+  const task: MaintenanceTask = {
+    id: createId('task'),
+    aquariumId,
+    title,
+    dueAt: input.dueAt,
+    completedAt: null,
+    createdAt: new Date().toISOString(),
+    recurrence: input.recurrence,
+    notificationId: null,
+    parentTaskId: null,
+  };
   await db.runAsync(
-    `INSERT INTO maintenance_tasks (id, aquarium_id, title, due_at, completed_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO maintenance_tasks
+      (id, aquarium_id, title, due_at, completed_at, created_at, recurrence, notification_id, parent_task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     task.id, task.aquariumId, task.title, task.dueAt, task.completedAt, task.createdAt,
+    task.recurrence, task.notificationId, task.parentTaskId,
   );
   return task;
 }
 
-export async function toggleTask(db: SQLiteDatabase, task: MaintenanceTask) {
-  const completedAt = task.completedAt ? null : new Date().toISOString();
-  await db.runAsync('UPDATE maintenance_tasks SET completed_at = ? WHERE id = ?', completedAt, task.id);
+export async function setTaskNotificationId(db: SQLiteDatabase, taskId: string, notificationId: string | null) {
+  await db.runAsync('UPDATE maintenance_tasks SET notification_id = ? WHERE id = ?', notificationId, taskId);
+}
+
+export async function completeTask(db: SQLiteDatabase, task: MaintenanceTask, nextDueAt: string | null) {
+  if (task.completedAt) return null;
+  const completedAt = new Date().toISOString();
+
+  let nextTask: MaintenanceTask | null = null;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE maintenance_tasks SET completed_at = ?, notification_id = NULL WHERE id = ?', completedAt, task.id);
+
+    if (task.recurrence !== 'none' && nextDueAt) {
+      nextTask = {
+        id: createId('task'),
+        aquariumId: task.aquariumId,
+        title: task.title,
+        dueAt: nextDueAt,
+        completedAt: null,
+        createdAt: completedAt,
+        recurrence: task.recurrence,
+        notificationId: null,
+        parentTaskId: task.parentTaskId ?? task.id,
+      };
+      await db.runAsync(
+        `INSERT INTO maintenance_tasks
+          (id, aquarium_id, title, due_at, completed_at, created_at, recurrence, notification_id, parent_task_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        nextTask.id, nextTask.aquariumId, nextTask.title, nextTask.dueAt, nextTask.completedAt,
+        nextTask.createdAt, nextTask.recurrence, nextTask.notificationId, nextTask.parentTaskId,
+      );
+    }
+  });
+
+  return nextTask;
+}
+
+export async function reopenTask(db: SQLiteDatabase, task: MaintenanceTask) {
+  if (!task.completedAt || task.recurrence !== 'none') return;
+  await db.runAsync('UPDATE maintenance_tasks SET completed_at = NULL WHERE id = ?', task.id);
 }
 
 export async function listHusbandryEvents(db: SQLiteDatabase, aquariumId: string) {
