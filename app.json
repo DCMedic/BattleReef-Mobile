@@ -37,7 +37,15 @@
         }
       ],
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow BattleReef to access your photos so you can build your aquarium timeline.",
+          "cameraPermission": "Allow BattleReef to use your camera for aquarium photos.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
