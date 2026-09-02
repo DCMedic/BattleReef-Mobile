@@ -28,6 +28,8 @@ export default function RootLayout() {
             <Stack.Screen name="analysis/advisory" options={{ title: 'Advisory' }} />
             <Stack.Screen name="livestock/new" options={{ title: 'Add livestock', presentation: 'modal' }} />
             <Stack.Screen name="equipment/new" options={{ title: 'Add equipment', presentation: 'modal' }} />
+            <Stack.Screen name="livestock/[id]" options={{ title: 'Livestock' }} />
+            <Stack.Screen name="equipment/[id]" options={{ title: 'Equipment' }} />
           </Stack>
         </ThemeProvider>
       </AppDataProvider>
