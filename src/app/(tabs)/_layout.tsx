@@ -31,22 +31,10 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Home', tabBarIcon: icon('home-outline') }}
-      />
-      <Tabs.Screen
-        name="logbook"
-        options={{ title: 'Logbook', tabBarIcon: icon('water-outline') }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{ title: 'Tasks', tabBarIcon: icon('checkmark-circle-outline') }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{ title: 'More', tabBarIcon: icon('grid-outline') }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home-outline') }} />
+      <Tabs.Screen name="logbook" options={{ title: 'Timeline', tabBarIcon: icon('time-outline') }} />
+      <Tabs.Screen name="tasks" options={{ title: 'Tasks', tabBarIcon: icon('checkmark-circle-outline') }} />
+      <Tabs.Screen name="settings" options={{ title: 'More', tabBarIcon: icon('grid-outline') }} />
     </Tabs>
   );
 }
