@@ -7,6 +7,7 @@ import { FormScreen } from '@/components/app/form-screen';
 import { Field, PrimaryButton } from '@/components/app/ui';
 import { Brand } from '@/constants/theme';
 import { parameterCatalog, type ParameterKey } from '@/domain/models';
+import { validateReading } from '@/domain/validation';
 import { useAppData } from '@/providers/app-data-provider';
 
 const parameters = Object.keys(parameterCatalog) as ParameterKey[];
@@ -21,23 +22,29 @@ export default function NewReadingScreen() {
   const [error, setError] = useState('');
 
   const parsedValue = Number(value);
-  const valid = Boolean(selectedAquarium) && value.trim() !== '' && Number.isFinite(parsedValue);
+  const draft = { parameter, value: parsedValue, note };
+  const validation = validateReading(draft);
+  const valid = Boolean(selectedAquarium) && value.trim() !== '' && validation.valid;
+  const definition = parameterCatalog[parameter];
 
   async function save() {
     if (!valid || saving) return;
     setSaving(true);
     setError('');
     try {
-      await addReading({ parameter, value: parsedValue, note });
-      router.back();
+      await addReading(draft);
+      router.replace('/logbook');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not save the reading.');
       setSaving(false);
     }
   }
 
+  const inlineError =
+    value.trim() !== '' && !validation.valid ? validation.message : '';
+
   return (
-    <FormScreen intro={`Record a manual test for ${selectedAquarium?.name ?? 'your aquarium'}. Values are stored locally and remain available offline.`}>
+    <FormScreen intro={`Record a manual test for ${selectedAquarium?.name ?? 'your aquarium'}. Manual entries are stored with provenance so future imports and sensor data can remain distinguishable.`}>
       <View style={styles.group}>
         <Text style={styles.label}>Parameter</Text>
         <View style={styles.grid}>
@@ -54,13 +61,15 @@ export default function NewReadingScreen() {
         </View>
       </View>
       <Field
+        hint={`Supported entry range: ${definition.hardMin}–${definition.hardMax} ${definition.unit}`}
         autoFocus={false}
         keyboardType="decimal-pad"
-        label={`Value (${parameterCatalog[parameter].unit})`}
+        label={`Value (${definition.unit})`}
         onChangeText={setValue}
         placeholder="0.0"
         value={value}
       />
+      {inlineError ? <Text accessibilityRole="alert" style={styles.error}>{inlineError}</Text> : null}
       <Field
         label="Note (optional)"
         maxLength={240}
@@ -71,7 +80,11 @@ export default function NewReadingScreen() {
         value={note}
       />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <PrimaryButton disabled={!valid || saving} label={saving ? 'Saving…' : 'Save reading'} onPress={() => void save()} />
+      <View style={styles.provenance}>
+        <Ionicons color={Brand.green} name="person-circle-outline" size={18} />
+        <Text style={styles.provenanceText}>Source: Manual entry · Confirmed by you</Text>
+      </View>
+      <PrimaryButton disabled={!valid || saving} label={saving ? 'Saving…' : 'Save & view history'} onPress={() => void save()} />
     </FormScreen>
   );
 }
@@ -85,5 +98,7 @@ const styles = StyleSheet.create({
   parameterText: { color: Brand.textMuted, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   parameterTextActive: { color: Brand.cyan },
   noteInput: { minHeight: 94, paddingTop: 14, textAlignVertical: 'top' },
+  provenance: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#0D382F', borderRadius: 12, padding: 12 },
+  provenanceText: { color: Brand.green, fontSize: 12, fontWeight: '700', flex: 1 },
   error: { color: Brand.red, fontSize: 13, lineHeight: 18 },
 });
