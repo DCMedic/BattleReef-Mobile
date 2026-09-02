@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,10 +11,11 @@ import { deleteManagedMedia, importPhotoToManagedStorage } from '@/services/medi
 
 export default function NewPhotoScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ livestockId?: string }>();
   const { addPhoto, livestock, selectedAquarium } = useAppData();
   const [uri, setUri] = useState('');
   const [caption, setCaption] = useState('');
-  const [linkedLivestockId, setLinkedLivestockId] = useState<string | null>(null);
+  const [linkedLivestockId, setLinkedLivestockId] = useState<string | null>(params.livestockId ?? null);
   const [saving, setSaving] = useState(false);
 
   async function choosePhoto() {
